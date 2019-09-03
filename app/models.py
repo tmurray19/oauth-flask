@@ -8,6 +8,15 @@ class User(UserMixin, db.Model):
     social_id = db.Column(db.String(64), nullable=False, unique=True)
     nickname = db.Column(db.String(64), nullable=False)
     email = db.Column(db.String(64), nullable=True)
+    twitter_access_token = db.Column(db.String(64), nullable=True)
+    twitter_access_token_secret = db.Column(db.String(64), nullable=True)
+    facebook_access_token = db.Column(db.String(64), nullable=True)
+    facebook_access_token_secret = db.Column(db.String(64), nullable=True)
+    insta_access_token = db.Column(db.String(64), nullable=True)
+    insta_access_token_secret = db.Column(db.String(64), nullable=True)
+    youtube_access_token = db.Column(db.String(64), nullable=True)
+    youtube_access_token_secret = db.Column(db.String(64), nullable=True)
+    
 
 @login.user_loader
 def load_user(id):
