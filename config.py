@@ -11,6 +11,7 @@ class Config(object):
     # SQL Database location
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'app.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
     OAUTH_CREDENTIALS = os.environ.get('OAUTH_CREDENTIALS') or {
         'facebook': {
             'id': 'N/A',
@@ -19,5 +20,9 @@ class Config(object):
         'twitter': {
             'id': 'Q64HOqkOgyeCGXZykvt6gIJur',
             'secret': 'W03elioGV05UMeFAnSCR7gqseIpGMmvUoprGPW5kSrz9boE7af'
+        },
+        'google': {
+            'id': 'N/A',
+            'secret': 'N/A'
         }
     }

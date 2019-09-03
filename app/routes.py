@@ -1,15 +1,11 @@
 from flask import Flask, redirect, url_for, render_template, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user
+from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
 from oauth import OAuthSignIn
-from app import app
+from app import app, db
 from app.models import User
-
-
-@LoginManager.user_loader
-def load_user(id):
-    return User.query.get(int(id))
+import tweepy
 
 
 @app.route('/')
@@ -36,7 +32,7 @@ def oauth_callback(provider):
     if not current_user.is_anonymous:
         return redirect(url_for('index'))
     oauth = OAuthSignIn.get_provider(provider)
-    social_id, username, email = oauth.callback()
+    social_id, username, email, access_token, access_token_secret = oauth.callback()
     if social_id is None:
         flash('Authentication failed.')
         return redirect(url_for('index'))
@@ -47,3 +43,43 @@ def oauth_callback(provider):
         db.session.commit()
     login_user(user, True)
     return redirect(url_for('index'))
+
+@login_required
+@app.route('/upload/twitter')
+def send_twitter():
+    creds = app.config['OAUTH_CREDENTIALS']['twitter']
+    auth = tweepy.OAuthHandler(creds['id'], creds['secret'])
+    auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
+
+    api = tweepy.API(auth)
+    api.update_status('Updating using OAuth authentication via Tweepy!')
+
+@login_required
+@app.route('/upload/facebook')
+def send_facebook():
+    creds = app.config['OAUTH_CREDENTIALS']['twitter']
+    auth = tweepy.OAuthHandler(creds['id'], creds['secret'])
+    auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
+
+    api = tweepy.API(auth)
+    api.update_status('Updating using OAuth authentication via Tweepy!')
+
+@login_required
+@app.route('/upload/youtube')
+def send_youtube():
+    creds = app.config['OAUTH_CREDENTIALS']['twitter']
+    auth = tweepy.OAuthHandler(creds['id'], creds['secret'])
+    auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
+
+    api = tweepy.API(auth)
+    api.update_status('Updating using OAuth authentication via Tweepy!')
+
+@login_required
+@app.route('/upload/instagram')
+def send_insta():
+    creds = app.config['OAUTH_CREDENTIALS']['twitter']
+    auth = tweepy.OAuthHandler(creds['id'], creds['secret'])
+    auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
+
+    api = tweepy.API(auth)
+    api.update_status('Updating using OAuth authentication via Tweepy!')

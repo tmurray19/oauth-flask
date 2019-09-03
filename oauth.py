@@ -97,13 +97,16 @@ class TwitterSignIn(OAuthSignIn):
     def callback(self):
         request_token = session.pop('request_token')
         if 'oauth_verifier' not in request.args:
-            return None, None, None
+            return None, None, None, None, None
         oauth_session = self.service.get_auth_session(
             request_token[0],
             request_token[1],
             data={'oauth_verifier': request.args['oauth_verifier']}
         )
         me = oauth_session.get('account/verify_credentials.json').json()
+        print(oauth_session.access_token)
+        print(oauth_session.access_token_secret)
+        print(me)
         social_id = 'twitter$' + str(me.get('id'))
         username = me.get('screen_name')
-        return social_id, username, None   # Twitter does not provide email
+        return social_id, username, None, oauth_session.access_token, oauth_session.access_token_secret   # Twitter does not provide email
