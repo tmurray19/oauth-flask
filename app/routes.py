@@ -32,19 +32,17 @@ def oauth_callback(provider):
     if not current_user.is_anonymous:
         return redirect(url_for('index'))
     oauth = OAuthSignIn.get_provider(provider)
-    social_id, username, email, access_token, access_token_secret = oauth.callback()
-    print(social_id)
-    print(username)
-    print(email)
-    print(access_token)
-    print(access_token_secret)    
+    social_id, username, email, access_token, access_token_secret = oauth.callback()   
     if social_id is None:
         flash('Authentication failed.')
         return redirect(url_for('index'))
     user = User.query.filter_by(social_id=social_id).first()
     if not user:
         # define access tokens in user accounts, based on which website they're querying
-        user = User(social_id=social_id, nickname=username, email=email, twitter_access_token=access_token, twitter_access_token_secret = access_token_secret)
+        if provider is 'twitter':
+            user = User(social_id=social_id, nickname=username, email=email, twitter_access_token=access_token, twitter_access_token_secret = access_token_secret)
+        elif provider is 'google':
+            user = User(social_id=social_id, nickname=username, email=email, youtube_access_token=access_token, youtube_access_token_secret = access_token_secret)
         db.session.add(user)
         db.session.commit()
     login_user(user, True)
@@ -73,7 +71,9 @@ def send_twitter():
     auth.set_access_token(current_user.twitter_access_token, current_user.twitter_access_token_secret)
 
     api = tweepy.API(auth)
-    api.update_status('Updating using OAuth authentication via Tweepy!')
+    media = api.upload_chunked("N:/vid.mp4")
+    #upload = api.media_upload("N:/test.mp4")
+    api.update_status('Uploading video using OAuth authentication via Tweepy! #twitterdev #python', media_ids=[media.media_id])
     return "Tweeted!"
 
 @login_required
@@ -102,6 +102,7 @@ def send_insta():
     creds = app.config['OAUTH_CREDENTIALS']['twitter']
     auth = tweepy.OAuthHandler(creds['id'], creds['secret'])
     auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
+    
 
     api = tweepy.API(auth)
     api.update_status('Updating using OAuth authentication via Tweepy!')

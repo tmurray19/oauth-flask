@@ -1,4 +1,4 @@
-import json
+import json, urllib
 
 from rauth import OAuth1Service, OAuth2Service
 from flask import current_app, url_for, request, redirect, session
@@ -104,9 +104,48 @@ class TwitterSignIn(OAuthSignIn):
             data={'oauth_verifier': request.args['oauth_verifier']}
         )
         me = oauth_session.get('account/verify_credentials.json').json()
-        print(oauth_session.access_token)
-        print(oauth_session.access_token_secret)
-        print(me)
         social_id = 'twitter$' + str(me.get('id'))
         username = me.get('screen_name')
         return social_id, username, None, oauth_session.access_token, oauth_session.access_token_secret   # Twitter does not provide email
+
+
+class GoogleSignIn(OAuthSignIn):
+    def __init__(self):
+        super(GoogleSignIn, self).__init__('google')
+        googleinfo = urllib.request.urlopen('https://accounts.google.com/.well-known/openid-configuration')
+        google_params = json.load(googleinfo)
+        self.service = OAuth2Service(
+                name='google',
+                client_id=self.consumer_id,
+                client_secret=self.consumer_secret,
+                authorize_url=google_params.get('authorization_endpoint'),
+                base_url=google_params.get('userinfo_endpoint'),
+                access_token_url=google_params.get('token_endpoint')
+        )
+
+    def authorize(self):
+        return redirect(self.service.get_authorize_url(
+            scope='email',
+            response_type='code',
+            redirect_uri=self.get_callback_url())
+            )
+
+    def callback(self):
+        if 'code' not in request.args:
+            return None, None, None
+        oauth_session = self.service.get_auth_session(
+                data={'code': request.args['code'],
+                      'grant_type': 'authorization_code',
+                      'redirect_uri': self.get_callback_url()
+                     },
+                decoder = json.loads
+        )
+        print("ID ", oauth_session.client_id)
+        #print("BOD ", oauth_session.body)
+        print("PARAMS ", oauth_session.params)
+        print("SECRENT ", oauth_session.client_secret)
+        print("RASD", oauth_session.access_token)
+        
+        me = oauth_session.get('').json()
+        print(me)
+        return me['sub'], me['email'], None, oauth_session.client_id, oauth_session.client_secret

@@ -12,6 +12,7 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
     OAUTH_CREDENTIALS = os.environ.get('OAUTH_CREDENTIALS') or {
         'facebook': {
             'id': 'N/A',
@@ -22,7 +23,7 @@ class Config(object):
             'secret': 'W03elioGV05UMeFAnSCR7gqseIpGMmvUoprGPW5kSrz9boE7af'
         },
         'google': {
-            'id': 'N/A',
-            'secret': 'N/A'
+            'id': '705996956550-pdtpes13chavp1sl2j6vpei968n1hach.apps.googleusercontent.com',
+            'secret': 'BCnxYZeVVC7e4RS7evTh5P8D'
         }
     }
