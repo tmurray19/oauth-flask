@@ -4,10 +4,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    social_id = db.Column(db.String(64), nullable=False, unique=True)
-    nickname = db.Column(db.String(64), nullable=False)
-    email = db.Column(db.String(64), nullable=True)
+    # User ID
+    uid = db.Column(db.Integer, primary_key=True)
+    # Company ID
+    coid = db.Column(db.Integer, nullable=True)
+
+    # Access tokens
     twitter_access_token = db.Column(db.String(64), nullable=True)
     twitter_access_token_secret = db.Column(db.String(64), nullable=True)
     facebook_access_token = db.Column(db.String(64), nullable=True)

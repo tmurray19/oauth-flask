@@ -11,11 +11,21 @@ from TwitterAPI import TwitterAPI
 
 
 @app.route('/')
+@login_required
 def index():
     # Store the user id and the company id, create an account with those two pieces of info stored
     # Then just update the user info as required
     return render_template('index.html')
 
+@app.route('/connect/UID=<int:uid>/COID=<int:companyid>')
+def test(uid, companyid):
+    # Store the user id and the company id, create an account with those two pieces of info stored
+    # Then just update the user info as required
+    if current_user.is_anonymous:
+        user = User(uid=uid, coid=companyid)
+        db.session.add(user)
+        login_user(user)
+    return render_template('index.html')
 
 @app.route('/logout')
 def logout():
@@ -36,31 +46,21 @@ def oauth_callback(provider):
     if not current_user.is_anonymous:
         return redirect(url_for('index'))
     oauth = OAuthSignIn.get_provider(provider)
-    social_id, username, email, access_token, access_token_secret = oauth.callback()  
+    social_id, access_token, access_token_secret = oauth.callback()  
     if social_id is None:
         flash('Authentication failed.')
         return redirect(url_for('index'))
-    user = User.query.filter_by(social_id=social_id).first()
-    if not user:
-        if provider is 'twitter':
-            # define access tokens in user accounts, based on which website they're querying
-            user = User(social_id=social_id, nickname=username, email=email, twitter_access_token=access_token, twitter_access_token_secret = access_token_secret)
-        elif provider is 'google':
-            pass
-        elif provider is 'facebook':
-            pass
-        elif provider is 'instagram':
-            pass
-        db.session.add(user)
+    if provider is 'twitter':
+        current_user.twitter_access_token = access_token
+        current_user.twitter_access_token_secret = access_token_secret
         db.session.commit()
-    login_user(user, True)
     return redirect(url_for('index'))
 
 @login_required
 @app.route('/upload/twitter')
 def send_twitter():
     error = False
-    problem = "Unknown"
+    problem = "No error specified"
     creds = app.config['OAUTH_CREDENTIALS']['twitter']
 
     twitter = TwitterAPI(
@@ -125,6 +125,7 @@ def send_twitter():
 @login_required
 @app.route('/upload/facebook')
 def send_facebook():
+    return render_template('error.html')
     creds = app.config['OAUTH_CREDENTIALS']['twitter']
     auth = tweepy.OAuthHandler(creds['id'], creds['secret'])
  
@@ -145,6 +146,7 @@ def send_youtube():
 @login_required
 @app.route('/upload/instagram')
 def send_insta():
+    return render_template('error.html')
     creds = app.config['OAUTH_CREDENTIALS']['twitter']
     auth = tweepy.OAuthHandler(creds['id'], creds['secret'])
     auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
