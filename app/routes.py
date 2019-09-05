@@ -59,6 +59,8 @@ def oauth_callback(provider):
 @login_required
 @app.route('/upload/twitter')
 def send_twitter():
+    error = False
+    problem = "Unknown"
     creds = app.config['OAUTH_CREDENTIALS']['twitter']
 
     twitter = TwitterAPI(
@@ -69,7 +71,7 @@ def send_twitter():
     )    
 
     # TODO: CHANGE THIS TO BE IMPLICIT
-    VIDEO_FILENAME = 'D:/test.mp4'
+    VIDEO_FILENAME = 'N:/test.mp4'
 
     bytes_sent = 0
     total_bytes = os.path.getsize(VIDEO_FILENAME)
@@ -79,6 +81,12 @@ def send_twitter():
         if r.status_code < 200 or r.status_code > 299:
             print(r.status_code)
             print(r.text)
+            if r.status_code == 400:
+                print("Video Length is too long")
+                print(type(r.text))
+                problem = r.text
+                error = True
+                return
             sys.exit(0)
 
     # initialize media upload and get a media reference ID in the response
@@ -104,12 +112,15 @@ def send_twitter():
     check_status(r)
 
     # post Tweet with media ID from previous request
-    # TODO: CHANGE STATUS
-    stat = 'Video uploaded from python script.'
+    # TODO: SET STATUS AS USER INPUT
+    stat = 'Video uploaded from python script. #python @RuairiMacGuinn'
     r = twitter.request('statuses/update', {'status': stat, 'media_ids':media_id})
     check_status(r)
     # Change this to redirect to a success page with the same data
-    return "Video Successfully uploaded!"
+    if error:
+        return "Video not uploaded successfully. Here's why: {}".format(problem)
+    else:
+        return "Video Successfully uploaded!"
 
 @login_required
 @app.route('/upload/facebook')
