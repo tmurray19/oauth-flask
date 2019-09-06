@@ -229,6 +229,8 @@ def send_youtube(proj_id):
     
     VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
 
+    print(request.form['privacy'])
+
     youtube = build(
         "youtube", 
         "v3",
