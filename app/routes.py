@@ -9,6 +9,7 @@ from app.models import User
 import tweepy
 from TwitterAPI import TwitterAPI
 import random, time
+from .forms import TwitterForm
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -24,14 +25,13 @@ from oauth2client.tools import argparser, run_flow
 
 @app.route('/')
 def index():
-    # Store the user id and the company id, create an account with those two pieces of info stored
-    # Then just update the user info as required
     if current_user.is_anonymous:
-        return redirect("https://squarev.dev.mobi")
+        return redirect("http://dev.squarev.mobi")
     return render_template('index.html')
 
+# LANDING PAGES
 @app.route('/connect/COID=<int:companyid>/UID=<int:uid>')
-def test(uid, companyid):
+def init_connect(uid, companyid):
     # Store the user id and the company id, create an account with those two pieces of info stored
     # Then just update the user info as required
     if current_user.is_anonymous:
@@ -41,15 +41,20 @@ def test(uid, companyid):
             db.session.add(user)
             db.session.commit()
         login_user(user, True)
-    print(current_user)
     return render_template('index.html')
 
-@app.route('/logout')
-def logout():
-    logout_user()
-    return redirect(url_for('index'))
+@app.route('/publish/COID=<int:companyid>/UID=<int:uid>/PID=<int:projectid>')
+def publish_land(uid, companyid, projectid):
+    if current_user.is_anonymous:
+        user = User.query.filter_by(uid=uid).first()
+        if not user:
+            user = User(uid=uid, coid=companyid)
+            db.session.add(user)
+            db.session.commit()
+        login_user(user, True)
+    return render_template('publish.html', proj_id=projectid)
 
-
+# AUTHORIZATION SERVICES
 @app.route('/authorize/<provider>')
 def oauth_authorize(provider):
     if provider == 'facebook' or provider == "instagram":
@@ -101,8 +106,6 @@ def oauth2callback():
     db.session.commit()
     return redirect(url_for('index'))
 
-
-
 @app.route('/callback/<provider>')
 def oauth_callback(provider):
     oauth = OAuthSignIn.get_provider(provider)
@@ -118,8 +121,15 @@ def oauth_callback(provider):
         db.session.commit()
     return redirect(url_for('index'))
 
+# UI Upload helpers
+@app.route('/publish/twitter/<int:proj_id>')
+def publish_twitter(proj_id):
+    form = TwitterForm()
+    return render_template('twitter.html', form=form)
+
+# API Upload functions
 @login_required
-@app.route('/upload/twitter')
+@app.route('/upload/twitter', methods=['POST'])
 def send_twitter():
     twitter_upload_error=False
     twitter_status = "Video Successfully uploaded!"
@@ -235,6 +245,7 @@ def send_insta():
     api.update_status('Updating using OAuth authentication via Tweepy!')
 
 
+# Utility functions
 def credentials_to_dict(credentials):
     return {
         'token': credentials.token,

@@ -1,0 +1,13 @@
+<form action = "{{ url_for('send_twitter')" method = post>
+    <fieldset>
+        <legend>Contact Form</legend>
+            {{ form.hidden_tag() }}
+            
+            <div>
+                {{ form.status_body.label }}<br>
+                {{ form.status_body }}<br>
+                {{ form.submit }}
+            </div>
+            
+    </fieldset>
+</form>

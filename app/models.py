@@ -31,3 +31,4 @@ def load_user(id):
     return User.query.get(int(id))
 
 #https://127.0.0.1:5000/connect/COID=45/UID=45
+#https://127.0.0.1:5000/publish/COID=512/UID=12/PID=1794
