@@ -123,8 +123,7 @@ def oauth_callback(provider):
 # UI Upload helpers
 @app.route('/publish/twitter/<int:proj_id>')
 def publish_twitter(proj_id):
-    form = TwitterForm()
-    return render_template('twitter.html', form=form, proj_id=proj_id)
+    return render_template('twitter.html', proj_id=proj_id)
 
 # API Upload functions
 @login_required
