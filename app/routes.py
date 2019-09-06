@@ -127,7 +127,7 @@ def publish_twitter(proj_id):
     return render_template('twitter.html', proj_id=proj_id)
 
 @app.route('/publish/youtube/<int:proj_id>')
-def publish_twitter(proj_id):
+def publish_youtube(proj_id):
     return render_template('google.html', proj_id=proj_id)
 
 # API Upload functions
@@ -224,7 +224,7 @@ def send_twitter(proj_id):
 
 @login_required
 @app.route('/upload/youtube/<int:proj_id>', methods=['POST'])
-def send_youtube():
+def send_youtube(proj_id):
     credentials = google.oauth2.credentials.Credentials(**current_user.youtube_credentials)
     
     VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
