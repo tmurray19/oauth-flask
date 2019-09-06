@@ -15,7 +15,7 @@
         {% endif %}
 
         {% if current_user.youtube_credentials is not none %}
-            <p><a href="{{ url_for('send_youtube') }}">Upload video to Youtube </a></p>
+            <p>Youtube authorized</p>
             {% else %}
             <p><a href="{{ url_for('oauth_authorize', provider='google') }}">Authorize Youtube</a></p>
         {% endif %}
