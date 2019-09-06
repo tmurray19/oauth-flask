@@ -1,5 +1,5 @@
 <h1>Project ID: {{ proj_id }}</h1>
-<form action = "{{ url_for('send_youtube)', proj_id=proj_id) }}" method="post">
+<form action = "{{ url_for('send_youtube', proj_id=proj_id) }}" method="post">
     Title:<br>
     <input type="text" name="title">Enter title</input>
     <br>Description:<br>
