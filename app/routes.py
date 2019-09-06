@@ -143,7 +143,7 @@ def send_twitter():
     )    
 
     # TODO: CHANGE THIS TO BE IMPLICIT
-    VIDEO_FILENAME = 'N:/test.mp4'
+    VIDEO_FILENAME = '/mnt/csae48d5df47deax41bcxbaa/videos/vid.mp4'
 
     bytes_sent = 0
     total_bytes = os.path.getsize(VIDEO_FILENAME)
@@ -221,10 +221,11 @@ def send_youtube():
         )
     )
 
+    # TODO: Implicity file name
     insert_request = youtube.videos().insert(
       part=",".join(list(body.keys())),
       body=body,
-      media_body=MediaFileUpload("N:/test.mp4", chunksize=-1, resumable=True)
+      media_body=MediaFileUpload('/mnt/csae48d5df47deax41bcxbaa/videos/vid.mp4', chunksize=-1, resumable=True)
     )
 
     resumable_upload(insert_request)
