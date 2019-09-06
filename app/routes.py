@@ -126,6 +126,10 @@ def oauth_callback(provider):
 def publish_twitter(proj_id):
     return render_template('twitter.html', proj_id=proj_id)
 
+@app.route('/publish/youtube/<int:proj_id>')
+def publish_twitter(proj_id):
+    return render_template('google.html', proj_id=proj_id)
+
 # API Upload functions
 @login_required
 @app.route('/upload/twitter/<int:proj_id>', methods=['POST'])
@@ -217,6 +221,44 @@ def send_twitter(proj_id):
     twitter_status = "Uploaded successfully"
     return twitter_status
 
+
+@login_required
+@app.route('/upload/youtube/<int:proj_id>'. methods=['POST'])
+def send_youtube():
+    credentials = google.oauth2.credentials.Credentials(**current_user.youtube_credentials)
+    
+    VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
+
+    youtube = build(
+        "youtube", 
+        "v3",
+        credentials=credentials
+    )
+
+    body=dict(
+        snippet=dict(
+            title=request.form['title'],
+            description=request.form['yt_desc'],
+            tags=request.form['tags'],
+            categoryId="22"
+        ),
+        status=dict(
+            request.form['privacy']
+        )
+    )
+
+    # TODO: Implicity file name
+    insert_request = youtube.videos().insert(
+      part=",".join(list(body.keys())),
+      body=body,
+      media_body=MediaFileUpload(VIDEO_FILENAME, chunksize=-1, resumable=True)
+    )
+
+    resumable_upload(insert_request)
+    
+    return "Uploaded video successfully!"
+
+
 @login_required
 @app.route('/upload/facebook')
 def send_facebook():
@@ -227,39 +269,6 @@ def send_facebook():
     #api = tweepy.API(auth)
     api.update_status('Updating using OAuth authentication via Tweepy!')
 
-
-@login_required
-@app.route('/upload/youtube')
-def send_youtube():
-    credentials = google.oauth2.credentials.Credentials(**current_user.youtube_credentials)
-    youtube = build(
-        "youtube", 
-        "v3",
-        credentials=credentials
-    )
-
-    body=dict(
-        snippet=dict(
-            title="TEst",
-            description="options.description",
-            tags="tags",
-            categoryId="22"
-        ),
-        status=dict(
-            privacyStatus="public"
-        )
-    )
-
-    # TODO: Implicity file name
-    insert_request = youtube.videos().insert(
-      part=",".join(list(body.keys())),
-      body=body,
-      media_body=MediaFileUpload('/mnt/csae48d5df47deax41bcxbaa/videos/vid.mp4', chunksize=-1, resumable=True)
-    )
-
-    resumable_upload(insert_request)
-    
-    return "Uploaded video successfully!"
 
 @login_required
 @app.route('/upload/instagram')

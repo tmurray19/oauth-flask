@@ -1,0 +1,17 @@
+<h1>Project ID: {{ proj_id }}</h1>
+<form action = "{{ url_for('send_google)', proj_id=proj_id) }}" method="post">
+    Title:<br>
+    <input type="text" name="title">Enter title</input>
+    <br>Description:<br>
+    <textarea rows="5" cols="50" name="yt_desc">Enter description</textarea>
+    <br>Privacy:<br>
+    <select name="privacy">
+            <option value="public">Public</option>
+            <option value="private">Private</option>
+            <option value="unlisted">Unlisted</option>
+    </select>
+    <br>Tags:<br>
+    <textarea rows="5" cols="50" name="tags">Enter tags (single words, separate by commas (',') )</textarea>
+    <br><br>
+    <input type="submit" value="Publish video to YouTube">
+</form>
