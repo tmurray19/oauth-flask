@@ -9,7 +9,7 @@
         {% endfor %}
 
         {% if current_user.twitter_access_token is not none %}
-            <p><a href="{{ url_for('send_twitter') }}">Upload video to Twitter</a></p>
+            <p>Twitter authenticated</p>
             {% else %}
             <p><a href="{{ url_for('oauth_authorize', provider='twitter') }}">Authorize Twitter</a></p>
         {% endif %}
