@@ -20,8 +20,8 @@ class Config(object):
             'secret': 'N/A'
         },
         'twitter': {
-            'id': 'tJr2grTKu1j0NKH6YuHy4KQxI ',
-            'secret': 'Qj6SJZWFSVio8ORuALs0nuFc3aVmL6gsHwndkJF6AWYRWnMT3e '
+            'id': 'tJr2grTKu1j0NKH6YuHy4KQxI',
+            'secret': 'Qj6SJZWFSVio8ORuALs0nuFc3aVmL6gsHwndkJF6AWYRWnMT3e'
         },
         'google': {
             'id': 'N/A',
