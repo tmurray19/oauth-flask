@@ -144,7 +144,7 @@ def send_twitter(proj_id):
 
     # TODO: CHANGE THIS TO BE IMPLICIT
     VIDEO_FILENAME = '/mnt/csae48d5df47deax41bcxbaa/videos/vid.mp4'
-    VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', proj_id, proj_id+'_edited.mp4')
+    VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
 
     bytes_sent = 0
     total_bytes = os.path.getsize(VIDEO_FILENAME)
