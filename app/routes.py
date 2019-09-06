@@ -6,7 +6,6 @@ from oauth import OAuthSignIn
 from app import app, db
 import os, sys
 from app.models import User
-import tweepy
 from TwitterAPI import TwitterAPI
 import random, time
 from .forms import TwitterForm
@@ -194,9 +193,9 @@ def send_twitter():
 def send_facebook():
     return render_template('error.html')
     creds = app.config['OAUTH_CREDENTIALS']['twitter']
-    auth = tweepy.OAuthHandler(creds['id'], creds['secret'])
+    #auth = tweepy.OAuthHandler(creds['id'], creds['secret'])
  
-    api = tweepy.API(auth)
+    #api = tweepy.API(auth)
     api.update_status('Updating using OAuth authentication via Tweepy!')
 
 
@@ -238,10 +237,10 @@ def send_insta():
 
     return render_template('error.html')
     creds = app.config['OAUTH_CREDENTIALS']['twitter']
-    auth = tweepy.OAuthHandler(creds['id'], creds['secret'])
+    #auth = tweepy.OAuthHandler(creds['id'], creds['secret'])
     auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
 
-    api = tweepy.API(auth)
+    #api = tweepy.API(auth)
     api.update_status('Updating using OAuth authentication via Tweepy!')
 
 
