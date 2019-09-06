@@ -223,7 +223,7 @@ def send_twitter(proj_id):
 
 
 @login_required
-@app.route('/upload/youtube/<int:proj_id>'. methods=['POST'])
+@app.route('/upload/youtube/<int:proj_id>', methods=['POST'])
 def send_youtube():
     credentials = google.oauth2.credentials.Credentials(**current_user.youtube_credentials)
     
