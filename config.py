@@ -20,6 +20,23 @@ class Config(object):
             'secret': 'N/A'
         },
         'twitter': {
+            'id': 'tJr2grTKu1j0NKH6YuHy4KQxI ',
+            'secret': 'Qj6SJZWFSVio8ORuALs0nuFc3aVmL6gsHwndkJF6AWYRWnMT3e '
+        },
+        'google': {
+            'id': 'N/A',
+            'secret': 'N/A'
+        }
+    }
+
+
+    """ This is for offline testing
+        OAUTH_CREDENTIALS = os.environ.get('OAUTH_CREDENTIALS') or {
+        'facebook': {
+            'id': 'N/A',
+            'secret': 'N/A'
+        },
+        'twitter': {
             'id': 'Q64HOqkOgyeCGXZykvt6gIJur',
             'secret': 'W03elioGV05UMeFAnSCR7gqseIpGMmvUoprGPW5kSrz9boE7af'
         },
@@ -29,7 +46,6 @@ class Config(object):
         }
     }
 
-    """
     Here is the youtube related information
     """
     httplib2.RETRIES = 1
