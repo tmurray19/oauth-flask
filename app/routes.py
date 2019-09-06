@@ -127,7 +127,7 @@ def publish_twitter(proj_id):
 
 # API Upload functions
 @login_required
-@app.route('/upload/twitter', methods=['POST'])
+@app.route('/upload/twitter/<int:proj_id>', methods=['POST'])
 def send_twitter(proj_id):
     stat = 'Video uploaded from python script. #python @RuairiMacGuinn'
     stat = request.form['tweet_body']
