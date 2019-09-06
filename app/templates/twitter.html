@@ -1,13 +1,5 @@
-<form action = "{{ url_for('send_twitter')" method = post>
-    <fieldset>
-        <legend>Contact Form</legend>
-            {{ form.hidden_tag() }}
-            
-            <div>
-                {{ form.status_body.label }}<br>
-                {{ form.status_body }}<br>
-                {{ form.submit }}
-            </div>
-            
-    </fieldset>
+<h1>Project ID: {{ proj_id }}</h1>
+<form action = "{{ url_for('send_twitter', proj_id=proj_id)" method = "post">
+    <textarea rows="5" cols="50" name="tweet_body">Enter tweet information here</textarea>
+    <input type="submit" value="tweet_submit">
 </form>

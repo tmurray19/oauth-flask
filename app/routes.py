@@ -124,14 +124,15 @@ def oauth_callback(provider):
 @app.route('/publish/twitter/<int:proj_id>')
 def publish_twitter(proj_id):
     form = TwitterForm()
-    return render_template('twitter.html', form=form)
+    return render_template('twitter.html', form=form, proj_id=proj_id)
 
 # API Upload functions
 @login_required
 @app.route('/upload/twitter', methods=['POST'])
-def send_twitter():
+def send_twitter(proj_id):
+    stat = 'Video uploaded from python script. #python @RuairiMacGuinn'
+    stat = request.form['tweet_body']
     twitter_upload_error=False
-    twitter_status = "Video Successfully uploaded!"
     problem = "No error specified"
     creds = app.config['OAUTH_CREDENTIALS']['twitter']
 
@@ -144,6 +145,7 @@ def send_twitter():
 
     # TODO: CHANGE THIS TO BE IMPLICIT
     VIDEO_FILENAME = '/mnt/csae48d5df47deax41bcxbaa/videos/vid.mp4'
+    VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', proj_id, proj_id+'_edited.mp4')
 
     bytes_sent = 0
     total_bytes = os.path.getsize(VIDEO_FILENAME)
@@ -155,8 +157,9 @@ def send_twitter():
             print(r.text)
             problem = r.text
             twitter_upload_error = True
-            print("Problem occured")        
+            print("Problem occured")
             twitter_status = "Video not uploaded successfully. Here's why: {}".format(problem)
+            return twitter_status
 
     # initialize media upload and get a media reference ID in the response
     r = twitter.request('media/upload', {'command':'INIT', 'media_type':'video/mp4', 'total_bytes':total_bytes})
@@ -167,6 +170,7 @@ def send_twitter():
 
     # start chucked upload
     while bytes_sent < total_bytes:
+        twitter_status = "File is uploading"
         chunk = file.read(4*1024*1024)
     
         # upload chunk of byets (5mb max)
@@ -182,10 +186,10 @@ def send_twitter():
 
     # post Tweet with media ID from previous request
     # TODO: SET STATUS AS USER INPUT
-    stat = 'Video uploaded from python script. #python @RuairiMacGuinn'
     r = twitter.request('statuses/update', {'status': stat, 'media_ids':media_id})
     check_status(r)
     # Change this to redirect to a success page with the same data
+    twitter_status = "Uploaded successfully"
     return twitter_status
 
 @login_required
