@@ -89,3 +89,10 @@ class Config(object):
         "https://www.googleapis.com/auth/userinfo.email", 
         "openid"
     ]
+
+    """
+    Here is the twitter
+    """
+        
+    MEDIA_ENDPOINT_URL = 'https://upload.twitter.com/1.1/media/upload.json'
+    POST_TWEET_URL = 'https://api.twitter.com/1.1/statuses/update.json'

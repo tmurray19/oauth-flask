@@ -4,11 +4,13 @@ from flask_migrate import Migrate
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
 from oauth import OAuthSignIn
 from app import app, db
-import os, sys
+import os, sys, json, requests
 from app.models import User
 from TwitterAPI import TwitterAPI
 import random, time
 from .forms import TwitterForm
+from requests_oauthlib import OAuth1
+
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -129,10 +131,11 @@ def publish_twitter(proj_id):
 @login_required
 @app.route('/upload/twitter/<int:proj_id>', methods=['POST'])
 def send_twitter(proj_id):
-    stat = 'Video uploaded from python script. #python @RuairiMacGuinn'
+    # Twitter status
     stat = request.form['tweet_body']
     twitter_upload_error=False
     problem = "No error specified"
+
     creds = app.config['OAUTH_CREDENTIALS']['twitter']
 
     twitter = TwitterAPI(
@@ -142,52 +145,83 @@ def send_twitter(proj_id):
         current_user.twitter_access_token_secret
     )    
 
-    # TODO: CHANGE THIS TO BE IMPLICIT
-    VIDEO_FILENAME = '/mnt/csae48d5df47deax41bcxbaa/videos/vid.mp4'
     VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
+
+    oauth_connection = OAuth1(
+        creds['id'],
+        creds['secret'],
+        current_user.twitter_access_token,
+        current_user.twitter_access_token_secret
+    )
 
     bytes_sent = 0
     total_bytes = os.path.getsize(VIDEO_FILENAME)
     file = open(VIDEO_FILENAME, 'rb')
 
-    def check_status(r):
-        if r.status_code < 200 or r.status_code > 299:
-            print(r.status_code)
-            print(r.text)
-            problem = r.text
-            twitter_upload_error = True
-            print("Problem occured")
-            twitter_status = "Video not uploaded successfully. Here's why: {}".format(problem)
-            return twitter_status
+ 
+    request_data = {
+        'command': 'INIT',
+        'media_type': 'video/mp4',
+        'total_bytes': total_bytes,
+        'media_category': 'tweet_video'
+    }
 
-    # initialize media upload and get a media reference ID in the response
-    r = twitter.request('media/upload', {'command':'INIT', 'media_type':'video/mp4', 'total_bytes':total_bytes})
-    check_status(r)
-
-    media_id = r.json()['media_id']
-    segment_id = 0
-
-    # start chucked upload
-    while bytes_sent < total_bytes:
-        twitter_status = "File is uploading"
-        chunk = file.read(4*1024*1024)
+    req = requests.post(url=app.config['MEDIA_ENDPOINT_URL'], data=request_data, auth=oauth_connection)
+    media_id = req.json()['media_id']
     
-        # upload chunk of byets (5mb max)
-        r = twitter.request('media/upload', {'command':'APPEND', 'media_id':media_id, 'segment_index':segment_id}, {'media':chunk})
-        check_status(r)
+    segment_id = 0
+    bytes_sent = 0
+
+    while bytes_sent < total_bytes:
+        chunk = file.read(4*1024*1024)
+        
+        print('APPEND')
+        
+        request_data = {
+            'command': 'APPEND',
+            'media_id': media_id,
+            'segment_index': segment_id
+        }
+
+        files = {
+            'media':chunk
+        }
+        
+        req = requests.post(url=app.config['MEDIA_ENDPOINT_URL'], data=request_data, files=files, auth=oauth_connection)
+
+        if req.status_code < 200 or req.status_code > 299:
+            print(req.status_code)
+            print(req.text)
+            sys.exit(0)
+
         segment_id = segment_id + 1
         bytes_sent = file.tell()
-        print('[' + str(total_bytes) + ']', str(bytes_sent))
 
-    # finalize the upload
-    r = twitter.request('media/upload', {'command':'FINALIZE', 'media_id':media_id})
-    check_status(r)
+        print('%s of %s bytes uploaded' % (str(bytes_sent), str(total_bytes)))
 
-    # post Tweet with media ID from previous request
-    # TODO: SET STATUS AS USER INPUT
-    r = twitter.request('statuses/update', {'status': stat, 'media_ids':media_id})
-    check_status(r)
-    # Change this to redirect to a success page with the same data
+    print('Upload chunks complete.')
+
+    print('FINALIZE')
+
+    request_data = {
+      'command': 'FINALIZE',
+      'media_id': media_id
+    }
+
+    req = requests.post(url=app.config['MEDIA_ENDPOINT_URL'], data=request_data, auth=oauth_connection)
+    print(req.json())
+
+    processing_info = req.json().get('processing_info', None)
+    check_status(processing_info, media_id, oauth_connection)
+
+    request_data = {
+      'status': stat,
+      'media_ids': media_id
+    }
+
+    req = requests.post(url=app.config['POST_TWEET_URL'], data=request_data, auth=oauth_connection)
+    print(req.json())
+
     twitter_status = "Uploaded successfully"
     return twitter_status
 
@@ -292,3 +326,36 @@ def resumable_upload(insert_request):
         time.sleep(sleep_seconds)
 
 
+def check_status(processing_info, media_id, oauth_connection):
+    '''
+    Checks video processing status
+    '''
+    if processing_info is None:
+      return
+
+    state = processing_info['state']
+
+    print('Media processing status is %s ' % state)
+
+    if state == u'succeeded':
+      return
+
+    if state == u'failed':
+      sys.exit(0)
+
+    check_after_secs = processing_info['check_after_secs']
+    
+    print('Checking after %s seconds' % str(check_after_secs))
+    time.sleep(check_after_secs)
+
+    print('STATUS')
+
+    request_params = {
+      'command': 'STATUS',
+      'media_id': media_id
+    }
+
+    req = requests.get(url=app.config['MEDIA_ENDPOINT_URL'], params=request_params, auth=oauth_connection)
+
+    processing_info = req.json().get('processing_info', None)
+    check_status(processing_info, media_id, oauth_connection)
