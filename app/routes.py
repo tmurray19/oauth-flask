@@ -6,7 +6,6 @@ from oauth import OAuthSignIn
 from app import app, db
 import os, sys, json, requests
 from app.models import User
-from TwitterAPI import TwitterAPI
 import random, time
 from .forms import TwitterForm
 from requests_oauthlib import OAuth1
@@ -137,13 +136,6 @@ def send_twitter(proj_id):
     problem = "No error specified"
 
     creds = app.config['OAUTH_CREDENTIALS']['twitter']
-
-    twitter = TwitterAPI(
-        creds['id'], 
-        creds['secret'], 
-        current_user.twitter_access_token, 
-        current_user.twitter_access_token_secret
-    )    
 
     VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
 
