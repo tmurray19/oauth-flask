@@ -245,7 +245,7 @@ def send_youtube(proj_id):
             categoryId="22"
         ),
         status=dict(
-            request.form['privacy']
+            "public"
         )
     )
 
