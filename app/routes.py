@@ -269,6 +269,11 @@ def send_youtube(proj_id):
     
     return "Uploaded video successfully!"
 
+@login_required
+@app.route('/upload/facebook/<int:proj_id>', methods=['POST'])
+def send_facebook(proj_id):
+    pass
+
 
 @login_required
 @app.route('/upload/facebook')
