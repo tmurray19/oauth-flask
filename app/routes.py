@@ -34,8 +34,8 @@ def index():
 def init_connect(uid, companyid):
     # If the user doesn't exist, create an account and store it in the database
     if current_user.is_anonymous:
-        user = User.query.filter_by(uid=uid).first()
-        logging.debug("Logging user in with id {}".format(uid))
+        user = User.query.filter_by(coid=companyid).first()
+        logging.debug("Logging user in with company id {}".format(companyid))
         if not user:
             logging.debug("User doesn't exist, creating account in database")
             user = User(uid=uid, coid=companyid)
@@ -51,7 +51,7 @@ def init_connect(uid, companyid):
 @app.route('/publish/COID=<int:companyid>/UID=<int:uid>/PID=<int:projectid>')
 def publish_land(uid, companyid, projectid):
     if current_user.is_anonymous:
-        user = User.query.filter_by(uid=uid).first()
+        user = User.query.filter_by(coid=companyid).first()
         # Tells user to authenticate if their account doesn't exist
         if not user:
             return render_template('invalid.html')
