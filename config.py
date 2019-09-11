@@ -14,10 +14,17 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+
+    # Directories
+    BASE_DIR = os.environ.get('BASE_DIR') or "/mnt/csae48d5df47deax41bcxbaa"
+    LOGS_LOCATION = os.environ.get('LOGS_LOCATION') or "logs" 
+    AUTH_LOG = os.environ.get('AUTH_LOG') or 'authFlask'
+
     OAUTH_CREDENTIALS = os.environ.get('OAUTH_CREDENTIALS') or {
         'facebook': {
-            'id': 'N/A',
-            'secret': 'N/A'
+            'id': '1209619439222314',
+            'secret': 'e7ab5768f06f329206e960e0965eb78c'
         },
         'twitter': {
             'id': 'tJr2grTKu1j0NKH6YuHy4KQxI',

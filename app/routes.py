@@ -9,7 +9,7 @@ from app.models import User
 import random, time
 from .forms import TwitterForm
 from requests_oauthlib import OAuth1
-
+import logging
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -29,45 +29,55 @@ def index():
         return redirect("http://dev.squarev.mobi")
     return render_template('index.html')
 
-# LANDING PAGES
+# This is our request page for the user, it creates an account under the uid and sends them to the auth page
 @app.route('/connect/COID=<int:companyid>/UID=<int:uid>')
 def init_connect(uid, companyid):
-    # Store the user id and the company id, create an account with those two pieces of info stored
-    # Then just update the user info as required
+    # If the user doesn't exist, create an account and store it in the database
     if current_user.is_anonymous:
         user = User.query.filter_by(uid=uid).first()
+        logging.debug("Logging user in with id {}".format(uid))
         if not user:
+            logging.debug("User doesn't exist, creating account in database")
             user = User(uid=uid, coid=companyid)
             db.session.add(user)
             db.session.commit()
+            logging.debug("User successfully created")
+        # Log the user in
         login_user(user, True)
+    # Send them to the landing page, where they authenticate other services
     return render_template('index.html')
 
+# This shows the user the upload pages for the accounts they have unlocked
 @app.route('/publish/COID=<int:companyid>/UID=<int:uid>/PID=<int:projectid>')
 def publish_land(uid, companyid, projectid):
     if current_user.is_anonymous:
         user = User.query.filter_by(uid=uid).first()
+        # Tells user to authenticate if their account doesn't exist
         if not user:
-            user = User(uid=uid, coid=companyid)
-            db.session.add(user)
-            db.session.commit()
+            return render_template('invalid.html')
         login_user(user, True)
     return render_template('publish.html', proj_id=projectid)
 
 # AUTHORIZATION SERVICES
 @app.route('/authorize/<provider>')
 def oauth_authorize(provider):
-    if provider == 'facebook' or provider == "instagram":
-        print("We should be here if anything other than twitter is clicked.")
+    if provider == "instagram":
+        logging.debug("An unavailable social media account has been provided.")
         return render_template('error.html')
+    # Google needs to be handled separately
     if provider == 'google':
+        # Create an OAuth flow to the google servers using the info in the config
         flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
             app.config['CLIENT_SECRETS_FILE'], 
             scopes=app.config['SCOPES']
         )
 
+        logging.debug("Google OAuth flow connection established")
+
+        # Get the URI to redirect the user back to the website once auth'd on google services
         flow.redirect_uri = url_for('oauth2callback', _external=True)
 
+        # Get link to direct user to google
         authorization_url, state = flow.authorization_url(
             access_type='offline',
             include_granted_scopes='true'
@@ -75,7 +85,8 @@ def oauth_authorize(provider):
 
         # Store the state so the callback can verify the auth server response.
         session['state'] = state
-
+        
+        # Return the google auth url to user
         return redirect(authorization_url)
     else:
         oauth = OAuthSignIn.get_provider(provider)
@@ -136,8 +147,6 @@ def publish_youtube(proj_id):
 def send_twitter(proj_id):
     # Twitter status
     stat = request.form['tweet_body']
-    twitter_upload_error=False
-    problem = "No error specified"
 
     creds = app.config['OAUTH_CREDENTIALS']['twitter']
 
