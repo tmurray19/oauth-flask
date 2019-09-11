@@ -35,7 +35,7 @@ def init_connect(uid, companyid):
     # Store the user id and the company id, create an account with those two pieces of info stored
     # Then just update the user info as required
     if current_user.is_anonymous:
-        user = User.query.filter_by(uid=uid).first()
+        user = User.query.filter_by(coid=companyid).first()
         if not user:
             user = User(uid=uid, coid=companyid)
             db.session.add(user)
@@ -46,7 +46,7 @@ def init_connect(uid, companyid):
 @app.route('/publish/COID=<int:companyid>/UID=<int:uid>/PID=<int:projectid>')
 def publish_land(uid, companyid, projectid):
     if current_user.is_anonymous:
-        user = User.query.filter_by(uid=uid).first()
+        user = User.query.filter_by(coid=companyid).first()
         if not user:
             user = User(uid=uid, coid=companyid)
             db.session.add(user)
