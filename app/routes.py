@@ -130,6 +130,10 @@ def oauth_callback(provider):
         current_user.twitter_access_token = access_token
         current_user.twitter_access_token_secret = access_token_secret
         db.session.commit()
+    elif provider == 'facebook':
+        print(social_id)
+        print(access_token)
+        print(access_token_secret)
     return redirect(url_for('index'))
 
 # UI Upload helpers
@@ -269,21 +273,11 @@ def send_youtube(proj_id):
     
     return "Uploaded video successfully!"
 
+
 @login_required
 @app.route('/upload/facebook/<int:proj_id>', methods=['POST'])
 def send_facebook(proj_id):
     pass
-
-
-@login_required
-@app.route('/upload/facebook')
-def send_facebook():
-    return render_template('error.html')
-    creds = app.config['OAUTH_CREDENTIALS']['twitter']
-    #auth = tweepy.OAuthHandler(creds['id'], creds['secret'])
- 
-    #api = tweepy.API(auth)
-    api.update_status('Updating using OAuth authentication via Tweepy!')
 
 
 @login_required

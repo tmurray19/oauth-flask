@@ -46,11 +46,11 @@ class FacebookSignIn(OAuthSignIn):
         )
 
 #scope='email' + 'publish_pages' + 'manage_pages',
-                  #127.0.0.1:5000/connect/COID=451245/UID=1337
+                  #https://127.0.0.1:5000/connect/COID=451245/UID=1337
   
     def authorize(self):
         return redirect(self.service.get_authorize_url(
-            scope='email',
+            scope='email publish_pages manage_pages',
             response_type='code',
             redirect_uri=self.get_callback_url())
         )
@@ -71,14 +71,15 @@ class FacebookSignIn(OAuthSignIn):
                   },
             decoder=decode_json
         )
-        print(oauth_session.get('access_token'))
-        print(oauth_session.get('access_token_secret'))
+        print("access token: ", self.service.get_access_token())
+        print("token: ", oauth_session.get('access_token'))
+        print("secret: ", oauth_session.get('access_token_secret'))
+        print(oauth_session)
         me = oauth_session.get('me?fields=id,email').json()
+        print("me: ", me)
         return (
             'facebook$' + me['id'],
-            me.get('email').split('@')[0],  # Facebook does not provide
-                                            # username, so the email's user
-                                            # is used instead
+            me.get('email').split('@')[0], 
             me.get('email')
         )
 
