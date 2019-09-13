@@ -37,22 +37,7 @@ class Config(object):
     }
 
 
-    """ This is for offline testing
-        OAUTH_CREDENTIALS = os.environ.get('OAUTH_CREDENTIALS') or {
-        'facebook': {
-            'id': 'N/A',
-            'secret': 'N/A'
-        },
-        'twitter': {
-            'id': 'Q64HOqkOgyeCGXZykvt6gIJur',
-            'secret': 'W03elioGV05UMeFAnSCR7gqseIpGMmvUoprGPW5kSrz9boE7af'
-        },
-        'google': {
-            'id': 'N/A',
-            'secret': 'N/A'
-        }
-    }
-
+    """ 
     Here is the youtube related information
     """
     httplib2.RETRIES = 1

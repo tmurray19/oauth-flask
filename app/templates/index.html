@@ -21,7 +21,7 @@
         {% endif %}
 
         {% if current_user.facebook_access_token is not none%}
-            <p><a href="{{ url_for('send_facebook') }}">Upload video to Facebook</a></p>
+            <p>Facebook authenticated</p>
             {% else %}
             <p><a href="{{ url_for('oauth_authorize', provider='facebook') }}">Authorize Facebook</a></p>            
         {% endif %}

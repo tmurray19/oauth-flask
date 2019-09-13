@@ -21,7 +21,7 @@
         {% endif %}
 
         {% if current_user.facebook_access_token is not none%}
-            <p><a href="{{ url_for('send_facebook') }}">Upload video to Facebook</a></p>   
+            <p><a href="{{ url_for('publish_facebook', proj_id=proj_id) }}">Upload video to Facebook</a></p>   
         {% endif %}
 
         {% if current_user.insta_access_token is not none %}

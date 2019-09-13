@@ -7,7 +7,6 @@ from app import app, db
 import os, sys, json, requests
 from app.models import User
 import random, time
-from .forms import TwitterForm
 from requests_oauthlib import OAuth1
 import logging
 
@@ -23,9 +22,11 @@ from oauth2client.file import Storage
 from oauth2client.tools import argparser, run_flow
 
 
+# We don't want anonymous users going here
 @app.route('/')
 def index():
     if current_user.is_anonymous:
+        logging.debug("Request made without logging in, sending back to editor")
         return redirect("http://dev.squarev.mobi")
     return render_template('index.html')
 
@@ -54,6 +55,7 @@ def publish_land(uid, companyid, projectid):
         user = User.query.filter_by(coid=companyid).first()
         # Tells user to authenticate if their account doesn't exist
         if not user:
+            logging.error("User with coid={} and uid={} doesn't exist in database".format(companyid, uid))
             return render_template('invalid.html')
         login_user(user, True)
     return render_template('publish.html', proj_id=projectid)
@@ -67,6 +69,7 @@ def oauth_authorize(provider):
     # Google needs to be handled separately
     if provider == 'google':
         # Create an OAuth flow to the google servers using the info in the config
+        logging.debug("Beginning dance for google OAuth")
         flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
             app.config['CLIENT_SECRETS_FILE'], 
             scopes=app.config['SCOPES']
@@ -89,6 +92,7 @@ def oauth_authorize(provider):
         # Return the google auth url to user
         return redirect(authorization_url)
     else:
+        logging.debug("Facebook or Twitter requested, beginning relevant OAuth dance")
         oauth = OAuthSignIn.get_provider(provider)
         return oauth.authorize()
 
@@ -96,7 +100,7 @@ def oauth_authorize(provider):
 @app.route('/oauth2callback')
 def oauth2callback():
     state = session['state']
-    
+    logging.debug("Reading google credentials to authenticate user")
     flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
         app.config['CLIENT_SECRETS_FILE'], 
         scopes=app.config['SCOPES'], 
@@ -109,41 +113,56 @@ def oauth2callback():
     flow.fetch_token(authorization_response=authorization_response) 
     credentials = flow.credentials
 
-    print(credentials)
-    print(credentials_to_dict(credentials))
 
-    # TODO: WRITE THIS INFORMATION TO THE USER ACCOUNT
+    logging.debug("Writing user credentials to database for user with coid={} and uid={}".format(current_user.coid, current_user.uid))
     current_user.youtube_credentials = credentials_to_dict(credentials)
     db.session.commit()
+    logging.debug("User successfully authenticated")
     return redirect(url_for('index'))
 
 @app.route('/callback/<provider>')
 def oauth_callback(provider):
     oauth = OAuthSignIn.get_provider(provider)
-    social_id, access_token, access_token_secret = oauth.callback()
-    print(social_id)  
+    # TODO: Better variable name
+    # Dummy is FB page id
+    social_id, access_token, access_token_secret, fb_page_id = oauth.callback()
     if social_id is None:
+        logging.debug("Authentication failed")
         flash('Authentication failed.')
         return redirect(url_for('index'))
-    print(provider=='twitter')
     if provider == 'twitter':
+        logging.debug("Writing twitter credentials to account for user with coid={} and uid={}".format(current_user.coid, current_user.uid))
         current_user.twitter_access_token = access_token
         current_user.twitter_access_token_secret = access_token_secret
         db.session.commit()
     elif provider == 'facebook':
-        print(social_id)
-        print(access_token)
-        print(access_token_secret)
+
+        logging.debug("user with coid={} and uid={} first page access token is being written to the database".format(current_user.coid, current_user.uid))
+
+        current_user.facebook_access_token_secret = access_token_secret
+
+        current_user.facebook_access_token = fb_page_id
+        db.session.commit()
     return redirect(url_for('index'))
 
 # UI Upload helpers
+@login_required
 @app.route('/publish/twitter/<int:proj_id>')
 def publish_twitter(proj_id):
+    logging.debug("User with coid={} and uid={} has made a request for Twitter upload".format(current_user.coid, current_user.uid))
     return render_template('twitter.html', proj_id=proj_id)
 
+@login_required
 @app.route('/publish/youtube/<int:proj_id>')
-def publish_youtube(proj_id):
+def publish_youtube(proj_id):    
+    logging.debug("User with coid={} and uid={} has made a request for Twitter upload".format(current_user.coid, current_user.uid))
     return render_template('google.html', proj_id=proj_id)
+
+@login_required
+@app.route('/publish/facebook/<int:proj_id>')
+def publish_facebook(proj_id):
+    logging.debug("User with coid={} and uid={} has made a request for Twitter upload".format(current_user.coid, current_user.uid))
+    return render_template('facebook.html', proj_id=proj_id)
 
 # API Upload functions
 @login_required
@@ -154,8 +173,14 @@ def send_twitter(proj_id):
 
     creds = app.config['OAUTH_CREDENTIALS']['twitter']
 
+    # File location
     VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
 
+    logging.debug("Project {} for upload to Twitter".format(proj_id))
+    logging.debug("Request made by user with coid={} and uid={}".format(current_user.coid, current_user.uid))
+    logging.debug("Tweet body for {} is {} ".format(proj_id, stat))
+
+    # Create OAuth1 flow
     oauth_connection = OAuth1(
         creds['id'],
         creds['secret'],
@@ -163,11 +188,14 @@ def send_twitter(proj_id):
         current_user.twitter_access_token_secret
     )
 
+    # Open file for uploading
     bytes_sent = 0
     total_bytes = os.path.getsize(VIDEO_FILENAME)
     file = open(VIDEO_FILENAME, 'rb')
 
  
+    # Initialise request
+    logging.debug("Initialising request for {}".format(proj_id))
     request_data = {
         'command': 'INIT',
         'media_type': 'video/mp4',
@@ -181,10 +209,11 @@ def send_twitter(proj_id):
     segment_id = 0
     bytes_sent = 0
 
+    # Video needs to be uploaded in chunks
     while bytes_sent < total_bytes:
         chunk = file.read(4*1024*1024)
         
-        print('APPEND')
+        logging.debug("APPEND FOR {}".format(proj_id))
         
         request_data = {
             'command': 'APPEND',
@@ -198,19 +227,19 @@ def send_twitter(proj_id):
         
         req = requests.post(url=app.config['MEDIA_ENDPOINT_URL'], data=request_data, files=files, auth=oauth_connection)
 
+        # If status code isn't in 200 range, something has gone wrong
         if req.status_code < 200 or req.status_code > 299:
-            print(req.status_code)
-            print(req.text)
+            logging.error("Error occured in uploading of file {}:\n Status Code: {} \n Details: {}".format(proj_id, req.status_code, req.text))
             sys.exit(0)
 
         segment_id = segment_id + 1
         bytes_sent = file.tell()
 
-        print('%s of %s bytes uploaded' % (str(bytes_sent), str(total_bytes)))
+        logging.debug('{} of {} bytes uploaded for {}'.format(str(bytes_sent), str(total_bytes), proj_id))
 
-    print('Upload chunks complete.')
+    logging.debug('Upload chunks complete for {}.'.format(proj_id))
 
-    print('FINALIZE')
+    logging.debug("FINALIZE")
 
     request_data = {
       'command': 'FINALIZE',
@@ -218,10 +247,10 @@ def send_twitter(proj_id):
     }
 
     req = requests.post(url=app.config['MEDIA_ENDPOINT_URL'], data=request_data, auth=oauth_connection)
-    print(req.json())
+    logging.debug(req.json())
 
     processing_info = req.json().get('processing_info', None)
-    check_status(processing_info, media_id, oauth_connection)
+    check_status(processing_info, media_id, oauth_connection, proj_id)
 
     request_data = {
       'status': stat,
@@ -229,9 +258,10 @@ def send_twitter(proj_id):
     }
 
     req = requests.post(url=app.config['POST_TWEET_URL'], data=request_data, auth=oauth_connection)
-    print(req.json())
+    logging.debug(req.json())
 
     twitter_status = "Uploaded successfully"
+    logging.debug("File {} uploaded successfully".format(proj_id))
     return twitter_status
 
 
@@ -241,8 +271,9 @@ def send_youtube(proj_id):
     credentials = google.oauth2.credentials.Credentials(**current_user.youtube_credentials)
     
     VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
-
-    print(request.form['privacy'])
+    
+    logging.debug("Project {} for upload to Youtube".format(proj_id))
+    logging.debug("Request made by user with coid={} and uid={}".format(current_user.coid, current_user.uid))
 
     youtube = build(
         "youtube", 
@@ -262,6 +293,8 @@ def send_youtube(proj_id):
         )
     )
 
+    logging.debug("Request data is {}, creating insert request for {}".format(body, proj_id))
+
     # TODO: Implicity file name
     insert_request = youtube.videos().insert(
       part=",".join(list(body.keys())),
@@ -269,7 +302,8 @@ def send_youtube(proj_id):
       media_body=MediaFileUpload(VIDEO_FILENAME, chunksize=-1, resumable=True)
     )
 
-    resumable_upload(insert_request)
+    logging.debug("Calling upload function for {}...".format(proj_id))
+    resumable_upload(insert_request, proj_id)
     
     return "Uploaded video successfully!"
 
@@ -277,20 +311,45 @@ def send_youtube(proj_id):
 @login_required
 @app.route('/upload/facebook/<int:proj_id>', methods=['POST'])
 def send_facebook(proj_id):
-    pass
+    url='https://graph-video.facebook.com/{}/videos?access_token={}'.format(
+        current_user.facebook_access_token,
+        current_user.facebook_access_token_secret
+    )
+    name = request.form['facebook_title']
+    desc = request.form['facebook_body']
+    VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
+    VIDEO_LOC = os.path.join('N:/project/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
+    VIDEO_FILENAME = str(proj_id) + "_edited.mp4"
+    
+    payload = {
+        'title': name,
+        'description': desc,
+    }
+    files = {
+        'source': (
+            VIDEO_FILENAME, 
+            open(VIDEO_LOC, 'rb'), 
+            'video/mp4'
+            )
+        }
 
+    logging.debug("Project {} for upload to Facebook".format(proj_id))
+    logging.debug("Request made by user with coid={} and uid={}".format(current_user.coid, current_user.uid))
+
+    flag = requests.post(url, data=payload, files=files).text
+    logging.debug(flag)
+    fb_res = json.loads(flag)
+    if not fb_res["error"]:
+        logging.debug("Project {} uploaded successfully".format(proj_id))
+        return "Video successfully uploaded to Facebook"
+    else:
+        logging.debug("Error occured in upload of {}\n{}".format(proj_id, fb_res))
+        return "There was an error during upload. Please try again or contact the Video Sherpa administrators."
 
 @login_required
 @app.route('/upload/instagram')
 def send_insta():
-
-    return render_template('error.html')
-    creds = app.config['OAUTH_CREDENTIALS']['twitter']
-    #auth = tweepy.OAuthHandler(creds['id'], creds['secret'])
-    auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
-
-    #api = tweepy.API(auth)
-    api.update_status('Updating using OAuth authentication via Tweepy!')
+    pass
 
 
 # Utility functions
@@ -305,39 +364,42 @@ def credentials_to_dict(credentials):
     }
 
 
-def resumable_upload(insert_request):
+def resumable_upload(insert_request, proj_id):
     response = None
     error = None
     retry = 0
     while response is None:
         try:
-            print("Uploading file...")
+            logging.debug("Uploading file for {}".format(proj_id))
             status, response = insert_request.next_chunk()
             if 'id' in response:
-                print("Video id '%s' was successfully uploaded." % response['id'])
-            else:
-                exit("The upload failed with an unexpected response: %s" % response)
+                logging.debug("Video id '{}' was successfully uploaded.".format(response['id']))
+            else:                
+                logging.error("The upload for file {} failed with an unexpected response: {}".format(proj_id, response))       
+                exit("The upload failed with an unexpected response: %s" % response)                
+
         except HttpError as e:
             if e.resp.status in app.config['RETRIABLE_STATUS_CODES']:
-                error = "A retriable HTTP error %d occurred:\n%s" % (e.resp.status, e.content)
+                error = "A retriable HTTP error {} occurred for {}:\n Content: {}".format(e.resp.status, proj_id, e.content)
             else:
                 raise
         except app.config['RETRIABLE_EXCEPTIONS'] as e:
-            error = "A retriable error occurred: %s" % e
+            error = "A retriable error occurred for {}: {}".format(proj_id, e)
         
         if error is not None:
-            print(error)
+            logging.error(error)
             retry += 1
         if retry > app.config['MAX_RETRIES']:
+            logging.error("No longer attempting to retry for {}.".format(proj_id))
             exit("No longer attempting to retry.")
         
         max_sleep = 2 ** retry
         sleep_seconds = random.random() * max_sleep
-        print("Sleeping %f seconds and then retrying..." % sleep_seconds)
+        logging.debug("Sleeping {} seconds and then retrying for {}...".format(sleep_seconds, proj_id))
         time.sleep(sleep_seconds)
 
 
-def check_status(processing_info, media_id, oauth_connection):
+def check_status(processing_info, media_id, oauth_connection, proj_id):
     '''
     Checks video processing status
     '''
@@ -346,7 +408,7 @@ def check_status(processing_info, media_id, oauth_connection):
 
     state = processing_info['state']
 
-    print('Media processing status is %s ' % state)
+    logging.debug('Media processing status for {} is {}'.format(proj_id, state))
 
     if state == u'succeeded':
       return
@@ -356,10 +418,10 @@ def check_status(processing_info, media_id, oauth_connection):
 
     check_after_secs = processing_info['check_after_secs']
     
-    print('Checking after %s seconds' % str(check_after_secs))
+    logging.debug('Checking after {} seconds for {}'.format(str(check_after_secs), proj_id))
     time.sleep(check_after_secs)
 
-    print('STATUS')
+    logging.debug('{} STATUS'.format(proj_id))
 
     request_params = {
       'command': 'STATUS',
@@ -369,4 +431,4 @@ def check_status(processing_info, media_id, oauth_connection):
     req = requests.get(url=app.config['MEDIA_ENDPOINT_URL'], params=request_params, auth=oauth_connection)
 
     processing_info = req.json().get('processing_info', None)
-    check_status(processing_info, media_id, oauth_connection)
+    check_status(processing_info, media_id, oauth_connection, proj_id)

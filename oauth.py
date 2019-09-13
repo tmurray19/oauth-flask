@@ -1,18 +1,24 @@
-import json
+import json, logging
 
 from rauth import OAuth1Service, OAuth2Service
 from flask import current_app, url_for, request, redirect, session
 
+###
+# This code is only for Facebook and Twitter
+# YouTube has its own OAuth flow
+###
 
 class OAuthSignIn(object):
     providers = None
 
+    # This code decides the right credentials to use in the code (Facebook or Twitter)
     def __init__(self, provider_name):
         self.provider_name = provider_name
         credentials = current_app.config['OAUTH_CREDENTIALS'][provider_name]
         self.consumer_id = credentials['id']
         self.consumer_secret = credentials['secret']
 
+    # Abstract functions
     def authorize(self):
         pass
 
@@ -23,6 +29,7 @@ class OAuthSignIn(object):
         return url_for('oauth_callback', provider=self.provider_name,
                        _external=True)
 
+    # This code determines the provider
     @classmethod
     def get_provider(self, provider_name):
         if self.providers is None:
@@ -32,7 +39,10 @@ class OAuthSignIn(object):
                 self.providers[provider.provider_name] = provider
         return self.providers[provider_name]
 
-
+# Initialise OAuth flow service for the Social Media
+# Redirect user to the social media for them to login
+# Receive the tokens and various info needed for video uploading
+# Pass that info to the routes, where it stores that info in the users account on the database
 class FacebookSignIn(OAuthSignIn):
     def __init__(self):
         super(FacebookSignIn, self).__init__('facebook')
@@ -44,9 +54,6 @@ class FacebookSignIn(OAuthSignIn):
             access_token_url='https://graph.facebook.com/oauth/access_token',
             base_url='https://graph.facebook.com/'
         )
-
-#scope='email' + 'publish_pages' + 'manage_pages',
-                  #https://127.0.0.1:5000/connect/COID=451245/UID=1337
   
     def authorize(self):
         return redirect(self.service.get_authorize_url(
@@ -61,26 +68,26 @@ class FacebookSignIn(OAuthSignIn):
 
         if 'code' not in request.args:
             return None, None, None
-        print("Hello")
+
         oauth_session = self.service.get_auth_session(
             data={'code': request.args['code'],
                   'grant_type': 'authorization_code',
                   'redirect_uri': self.get_callback_url(),
-                  #'access_token': request.args['access_token'],
-                  #'access_token_secret': request.args['access_token_secret'],
                   },
             decoder=decode_json
         )
-        print("access token: ", self.service.get_access_token())
-        print("token: ", oauth_session.get('access_token'))
-        print("secret: ", oauth_session.get('access_token_secret'))
-        print(oauth_session)
-        me = oauth_session.get('me?fields=id,email').json()
-        print("me: ", me)
+
+        me = oauth_session.get('me?fields=id,email,accounts').json()
+        logging.debug("Facebook me information: {}".format(me))
+        # Returns ID for user
+        # Their email
+        # The access token for the first page they own
+        # And the ID for the first page they own
         return (
             'facebook$' + me['id'],
-            me.get('email').split('@')[0], 
-            me.get('email')
+            me.get('email'),
+            me['accounts']['data'][0].get('access_token'),
+            me['accounts']['data'][0].get("id"),
         )
 
 
@@ -117,5 +124,6 @@ class TwitterSignIn(OAuthSignIn):
 
         social_id = 'twitter$' + str(me.get('id'))
         username = me.get('screen_name')
-        return social_id, oauth_session.access_token, oauth_session.access_token_secret   # Twitter does not provide email
+        # Provide twitter username, and OAuth access token and secret
+        return social_id, oauth_session.access_token, oauth_session.access_token_secret, None   
 
