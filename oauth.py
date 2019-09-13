@@ -1,18 +1,24 @@
-import json, urllib
+import json, logging
 
 from rauth import OAuth1Service, OAuth2Service
 from flask import current_app, url_for, request, redirect, session
 
+###
+# This code is only for Facebook and Twitter
+# YouTube has its own OAuth flow
+###
 
 class OAuthSignIn(object):
     providers = None
 
+    # This code decides the right credentials to use in the code (Facebook or Twitter)
     def __init__(self, provider_name):
         self.provider_name = provider_name
         credentials = current_app.config['OAUTH_CREDENTIALS'][provider_name]
         self.consumer_id = credentials['id']
         self.consumer_secret = credentials['secret']
 
+    # Abstract functions
     def authorize(self):
         pass
 
@@ -23,6 +29,7 @@ class OAuthSignIn(object):
         return url_for('oauth_callback', provider=self.provider_name,
                        _external=True)
 
+    # This code determines the provider
     @classmethod
     def get_provider(self, provider_name):
         if self.providers is None:
@@ -32,7 +39,10 @@ class OAuthSignIn(object):
                 self.providers[provider.provider_name] = provider
         return self.providers[provider_name]
 
-
+# Initialise OAuth flow service for the Social Media
+# Redirect user to the social media for them to login
+# Receive the tokens and various info needed for video uploading
+# Pass that info to the routes, where it stores that info in the users account on the database
 class FacebookSignIn(OAuthSignIn):
     def __init__(self):
         super(FacebookSignIn, self).__init__('facebook')
@@ -44,10 +54,10 @@ class FacebookSignIn(OAuthSignIn):
             access_token_url='https://graph.facebook.com/oauth/access_token',
             base_url='https://graph.facebook.com/'
         )
-
+  
     def authorize(self):
         return redirect(self.service.get_authorize_url(
-            scope='email',
+            scope='email publish_pages manage_pages',
             response_type='code',
             redirect_uri=self.get_callback_url())
         )
@@ -58,19 +68,26 @@ class FacebookSignIn(OAuthSignIn):
 
         if 'code' not in request.args:
             return None, None, None
+
         oauth_session = self.service.get_auth_session(
             data={'code': request.args['code'],
                   'grant_type': 'authorization_code',
-                  'redirect_uri': self.get_callback_url()},
+                  'redirect_uri': self.get_callback_url(),
+                  },
             decoder=decode_json
         )
-        me = oauth_session.get('me?fields=id,email').json()
+
+        me = oauth_session.get('me?fields=id,email,accounts').json()
+        logging.debug("Facebook me information: {}".format(me))
+        # Returns ID for user
+        # Their email
+        # The access token for the first page they own
+        # And the ID for the first page they own
         return (
             'facebook$' + me['id'],
-            me.get('email').split('@')[0],  # Facebook does not provide
-                                            # username, so the email's user
-                                            # is used instead
-            me.get('email')
+            me.get('email'),
+            me['accounts']['data'][0].get('access_token'),
+            me['accounts']['data'][0].get("id"),
         )
 
 
@@ -97,55 +114,16 @@ class TwitterSignIn(OAuthSignIn):
     def callback(self):
         request_token = session.pop('request_token')
         if 'oauth_verifier' not in request.args:
-            return None, None, None, None, None
+            return None, None, None
         oauth_session = self.service.get_auth_session(
             request_token[0],
             request_token[1],
             data={'oauth_verifier': request.args['oauth_verifier']}
         )
         me = oauth_session.get('account/verify_credentials.json').json()
+
         social_id = 'twitter$' + str(me.get('id'))
         username = me.get('screen_name')
-        return social_id, username, None, oauth_session.access_token, oauth_session.access_token_secret   # Twitter does not provide email
+        # Provide twitter username, and OAuth access token and secret
+        return social_id, oauth_session.access_token, oauth_session.access_token_secret, None   
 
-
-class GoogleSignIn(OAuthSignIn):
-    def __init__(self):
-        super(GoogleSignIn, self).__init__('google')
-        googleinfo = urllib.request.urlopen('https://accounts.google.com/.well-known/openid-configuration')
-        google_params = json.load(googleinfo)
-        self.service = OAuth2Service(
-                name='google',
-                client_id=self.consumer_id,
-                client_secret=self.consumer_secret,
-                authorize_url=google_params.get('authorization_endpoint'),
-                base_url=google_params.get('userinfo_endpoint'),
-                access_token_url=google_params.get('token_endpoint')
-        )
-
-    def authorize(self):
-        return redirect(self.service.get_authorize_url(
-            scope='email',
-            response_type='code',
-            redirect_uri=self.get_callback_url())
-            )
-
-    def callback(self):
-        if 'code' not in request.args:
-            return None, None, None
-        oauth_session = self.service.get_auth_session(
-                data={'code': request.args['code'],
-                      'grant_type': 'authorization_code',
-                      'redirect_uri': self.get_callback_url()
-                     },
-                decoder = json.loads
-        )
-        print("ID ", oauth_session.client_id)
-        #print("BOD ", oauth_session.body)
-        print("PARAMS ", oauth_session.params)
-        print("SECRENT ", oauth_session.client_secret)
-        print("RASD", oauth_session.access_token)
-        
-        me = oauth_session.get('').json()
-        print(me)
-        return me['sub'], me['email'], None, oauth_session.client_id, oauth_session.client_secret
