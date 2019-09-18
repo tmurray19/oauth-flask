@@ -31,15 +31,15 @@ def index():
     return render_template('index.html')
 
 # This is our request page for the user, it creates an account under the uid and sends them to the auth page
-@app.route('/connect/COID=<int:companyid>/UID=<int:uid>')
-def init_connect(uid, companyid):
+@app.route('/connect/COID=<int:companyid>/UID=<int:userid>')
+def init_connect(userid, companyid):
     # If the user doesn't exist, create an account and store it in the database
     if current_user.is_anonymous:
         user = User.query.filter_by(coid=companyid).first()
         logging.debug("Logging user in with company id {}".format(companyid))
         if not user:
             logging.debug("User doesn't exist, creating account in database")
-            user = User(uid=uid, coid=companyid)
+            user = User(uid=userid, coid=companyid)
             db.session.add(user)
             db.session.commit()
             logging.debug("User successfully created")
@@ -154,13 +154,13 @@ def publish_twitter(proj_id):
 @login_required
 @app.route('/publish/youtube/<int:proj_id>')
 def publish_youtube(proj_id):    
-    logging.debug("User with coid={} and uid={} has made a request for Twitter upload".format(current_user.coid, current_user.uid))
+    logging.debug("User with coid={} and uid={} has made a request for Youtube upload".format(current_user.coid, current_user.uid))
     return render_template('google.html', proj_id=proj_id)
 
 @login_required
 @app.route('/publish/facebook/<int:proj_id>')
 def publish_facebook(proj_id):
-    logging.debug("User with coid={} and uid={} has made a request for Twitter upload".format(current_user.coid, current_user.uid))
+    logging.debug("User with coid={} and uid={} has made a request for Facebook upload".format(current_user.coid, current_user.uid))
     return render_template('facebook.html', proj_id=proj_id)
 
 # API Upload functions
