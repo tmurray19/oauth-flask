@@ -51,6 +51,7 @@ def init_connect(userid, companyid):
 # This shows the user the upload pages for the accounts they have unlocked
 @app.route('/publish/COID=<int:companyid>/UID=<int:uid>/PID=<int:projectid>')
 def publish_land(uid, companyid, projectid):
+    logout_user()
     if current_user.is_anonymous:
         user = User.query.filter_by(coid=companyid).first()
         # Tells user to authenticate if their account doesn't exist
