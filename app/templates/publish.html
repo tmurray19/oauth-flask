@@ -1,35 +1,30 @@
-<html>
-    <head>
-        <title>Sherpa authentication services</title>
-    </head>
-    <body>
-        <h1>Authenticate accounts here</h1>
-        {% for message in get_flashed_messages() %}
-            <p><b>Error</b>: {{ message }}</p>
-        {% endfor %}
+{% extends "base.html" %}
 
-        <h1>You are publishing a video: {{ proj_id }}</h1>
-        <h2>Company ID: {{ current_user.coid }}</h2>
-        <h2>User ID: {{ current_user.uid }}</h2>
+{% block content %}
+    <h1>Authenticate accounts here</h1>
+    {% for message in get_flashed_messages() %}
+        <p><b>Error</b>: {{ message }}</p>
+    {% endfor %}
 
-        Here are your current authenticated services:
-        
-        {% if current_user.twitter_access_token is not none %}
-            <p><a href="{{ url_for('publish_twitter', proj_id=proj_id) }}">Upload video to Twitter</a></p>
-        {% endif %}
+    <h1>You are publishing a video: {{ proj_id }}</h1>
+    <h2>Company ID: {{ current_user.coid }}</h2>
+    <h2>User ID: {{ current_user.uid }}</h2>
 
-        {% if current_user.youtube_credentials is not none %}
-            <p><a href="{{ url_for('publish_youtube', proj_id=proj_id) }}">Upload video to Youtube </a></p>
-        {% endif %}
+    Here are your current authenticated services:
+    
+    {% if current_user.twitter_access_token is not none %}
+        <p><a href="{{ url_for('publish_twitter', proj_id=proj_id) }}">Upload video to Twitter</a></p>
+    {% endif %}
 
-        {% if current_user.facebook_access_token is not none%}
-            <p><a href="{{ url_for('publish_facebook', proj_id=proj_id) }}">Upload video to Facebook</a></p>   
-        {% endif %}
+    {% if current_user.youtube_credentials is not none %}
+        <p><a href="{{ url_for('publish_youtube', proj_id=proj_id) }}">Upload video to Youtube </a></p>
+    {% endif %}
 
-        {% if current_user.insta_access_token is not none %}
-            <p><a href="{{ url_for('send_insta') }}">Upload video to Instagram</a></p>
-        {% endif %}  
+    {% if current_user.facebook_access_token is not none%}
+        <p><a href="{{ url_for('publish_facebook', proj_id=proj_id) }}">Upload video to Facebook</a></p>   
+    {% endif %}
 
-
-    </body>
-</html>
+    {% if current_user.insta_access_token is not none %}
+        <p><a href="{{ url_for('send_insta') }}">Upload video to Instagram</a></p>
+    {% endif %}  
+{% endblock %}

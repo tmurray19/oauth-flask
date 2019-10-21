@@ -1,37 +1,33 @@
-<html>
-    <head>
-        <title>Sherpa authentication services</title>
-    </head>
-    <body>
-        <h1>Authenticate accounts here</h1>
-        {% for message in get_flashed_messages() %}
-            <p><b>Error</b>: {{ message }}</p>
-        {% endfor %}
+{% extends "base.html" %}
 
-        {% if current_user.twitter_access_token is not none %}
-            <p>Twitter authenticated</p>
-            {% else %}
-            <p><a href="{{ url_for('oauth_authorize', provider='twitter') }}">Authorize Twitter</a></p>
-        {% endif %}
+{% block content %}
+    <h1>Authenticate accounts here</h1>
+    {% for message in get_flashed_messages() %}
+        <p><b>Error</b>: {{ message }}</p>
+    {% endfor %}
 
-        {% if current_user.youtube_credentials is not none %}
-            <p>Youtube authorized</p>
-            {% else %}
-            <p><a href="{{ url_for('oauth_authorize', provider='google') }}">Authorize Youtube</a></p>
-        {% endif %}
+    {% if current_user.twitter_access_token is not none %}
+        <p>Twitter authenticated</p>
+        {% else %}
+        <p><a href="{{ url_for('oauth_authorize', provider='twitter') }}">Authorize Twitter</a></p>
+    {% endif %}
 
-        {% if current_user.facebook_access_token is not none%}
-            <p>Facebook authenticated</p>
-            {% else %}
-            <p><a href="{{ url_for('oauth_authorize', provider='facebook') }}">Authorize Facebook</a></p>            
-        {% endif %}
+    {% if current_user.youtube_credentials is not none %}
+        <p>Youtube authorized</p>
+        {% else %}
+        <p><a href="{{ url_for('oauth_authorize', provider='google') }}">Authorize Youtube</a></p>
+    {% endif %}
 
-        {% if current_user.insta_access_token is not none %}
-            <p><a href="{{ url_for('send_insta') }}">Upload video to Instagram</a></p>
-            {% else %}
-            <p><a href="{{ url_for('oauth_authorize', provider='instagram') }}">Authorize Instagram</a></p>
-        {% endif %}  
+    {% if current_user.facebook_access_token is not none%}
+        <p>Facebook authenticated</p>
+        {% else %}
+        <p><a href="{{ url_for('oauth_authorize', provider='facebook') }}">Authorize Facebook</a></p>            
+    {% endif %}
 
-
-    </body>
-</html>
+    {% if current_user.insta_access_token is not none %}
+        <p><a href="{{ url_for('send_insta') }}">Upload video to Instagram</a></p>
+        {% else %}
+        <!-- <p><a href="{{ url_for('oauth_authorize', provider='instagram') }}">Authorize Instagram</a></p> -->
+        <p></p>
+    {% endif %}  
+{% endblock %}
