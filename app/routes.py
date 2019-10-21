@@ -27,7 +27,7 @@ from oauth2client.tools import argparser, run_flow
 def index():
     if current_user.is_anonymous:
         logging.debug("Request made without logging in, sending back to editor")
-        return redirect("http://dev.squarev.mobi")
+        return redirect("http://beta.videosherpa.com")
     return render_template('index.html')
 
 # This is our request page for the user, it creates an account under the uid and sends them to the auth page
@@ -168,7 +168,7 @@ def publish_facebook(proj_id):
 @login_required
 @app.route('/upload/twitter/<int:proj_id>', methods=['POST'])
 def send_twitter(proj_id):
-    # Twitter status
+    # Twitter status - This is the tweet
     stat = request.form['tweet_body']
 
     creds = app.config['OAUTH_CREDENTIALS']['twitter']
