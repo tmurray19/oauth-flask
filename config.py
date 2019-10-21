@@ -17,7 +17,9 @@ class Config(object):
 
 
     # Directories
-    BASE_DIR = os.environ.get('BASE_DIR') or "/mnt/csae48d5df47deax41bcxbaa"
+    BASE_DIR = os.environ.get('BASE_DIR') or "/mnt/csae48d5df47deax41bcxbaa/SherpaVideos/"
+    #BASE_DIR = os.environ.get('BASE_DIR') or "N:/project"
+    VIDS_LOCATION = os.environ.get('VIDS_LOCATION') or "Videos"
     LOGS_LOCATION = os.environ.get('LOGS_LOCATION') or "logs" 
     AUTH_LOG = os.environ.get('AUTH_LOG') or 'authFlask'
 

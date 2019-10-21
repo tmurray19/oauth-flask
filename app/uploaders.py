@@ -29,7 +29,7 @@ def send_twitter(proj_id, stat, user_coid, user_uid, access_token, access_token_
     creds = Config.OAUTH_CREDENTIALS['twitter']
 
     # File location
-    VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
+    VIDEO_FILENAME =  os.path.join('/mnt/csae48d5df47deax41bcxbaa/SherpaVideos/Videos/', str(proj_id), str(proj_id)+'_edited.mp4')
 
     logging.debug("Project {} for upload to Twitter".format(proj_id))
     logging.debug("Request made by user with coid={} and uid={}".format(user_uid, user_coid))
@@ -124,7 +124,7 @@ def send_twitter(proj_id, stat, user_coid, user_uid, access_token, access_token_
 def send_youtube(proj_id, youtube_credentials, user_coid, user_uid, youtube_form):
     credentials = google.oauth2.credentials.Credentials(**youtube_credentials)
     
-    VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
+    VIDEO_FILENAME =  os.path.join('/mnt/csae48d5df47deax41bcxbaa/SherpaVideos/Videos/', str(proj_id), str(proj_id)+'_edited.mp4')
     
     logging.debug("Project {} for upload to Youtube".format(proj_id))
     logging.debug("Request made by user with coid={} and uid={}".format(user_coid, user_coid))
@@ -169,8 +169,8 @@ def send_facebook(proj_id, user_access_token, user_access_secret, title, body, u
     )
     name = title
     desc = body
-    VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
-    VIDEO_LOC = os.path.join('N:/project/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
+    VIDEO_LOC = os.path.join('/mnt/csae48d5df47deax41bcxbaa/SherpaVideos/Videos/', str(proj_id), str(proj_id)+'_edited.mp4')
+    #VIDEO_LOC = os.path.join('N:/project/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
     VIDEO_FILENAME = str(proj_id) + "_edited.mp4"
     
     payload = {

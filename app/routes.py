@@ -149,20 +149,32 @@ def oauth_callback(provider):
 @login_required
 @app.route('/publish/twitter/<int:proj_id>')
 def publish_twitter(proj_id):
+
+    # Open JSON data to read metadata
+    json_data = get_metadata(proj_id)
+
     logging.debug("User with coid={} and uid={} has made a request for Twitter upload".format(current_user.coid, current_user.uid))
-    return render_template('twitter.html', proj_id=proj_id)
+    return render_template('twitter.html', data=json_data)
 
 @login_required
 @app.route('/publish/youtube/<int:proj_id>')
-def publish_youtube(proj_id):    
+def publish_youtube(proj_id):
+
+    # Open JSON data to read metadata
+    json_data = get_metadata(proj_id)
+
     logging.debug("User with coid={} and uid={} has made a request for Youtube upload".format(current_user.coid, current_user.uid))
-    return render_template('google.html', proj_id=proj_id)
+    return render_template('google.html', data=json_data)
 
 @login_required
 @app.route('/publish/facebook/<int:proj_id>')
-def publish_facebook(proj_id):
+def publish_facebook(proj_id):    
+    
+    # Open JSON data to read metadata
+    json_data = get_metadata(proj_id)
+
     logging.debug("User with coid={} and uid={} has made a request for Facebook upload".format(current_user.coid, current_user.uid))
-    return render_template('facebook.html', proj_id=proj_id)
+    return render_template('facebook.html', data=json_data)
 
 # API Upload functions
 @login_required
@@ -432,3 +444,30 @@ def check_status(processing_info, media_id, oauth_connection, proj_id):
 
     processing_info = req.json().get('processing_info', None)
     check_status(processing_info, media_id, oauth_connection, proj_id)
+
+def get_metadata(proj_id):
+    base_dir = os.path.join(app.config['BASE_DIR'], app.config['VIDS_LOCATION'], proj_id, 'FinalSubclip.json')
+    file_location = os.path.join(base_dir, 'FinalSubclip.json')
+
+    json_data = json.load(open(file_location, 'r'))
+
+    try:
+        vid_icon = json_data['CutAwayFootage'][0]['Meta']['Name'] + ".jpg"
+    except KeyError:
+        vid_icon = json_data['InterviewFootage'][0]['Meta']['Name'] + ".jpg"
+    except:
+        logging.error("Unknown error in creation of metadata for '{}'".format(proj_id))
+        logging.exception('')
+        return None
+
+    vid_icon = os.path.join(base_dir, vid_icon)
+
+    data = {
+        'proj_id': proj_id,
+        'vid_name': json_data['Name'],
+        'vid_icon': vid_icon,
+    }
+
+    return data
+
+
