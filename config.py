@@ -33,6 +33,10 @@ class Config(object):
         'google': {
             'id': '705996956550-pdtpes13chavp1sl2j6vpei968n1hach.apps.googleusercontent.com',
             'secret': 'BCnxYZeVVC7e4RS7evTh5P8D'
+        },
+        'linkedin': {
+            'id': '8629lxwlldj1oo',
+            'secret': 'jhJNdYStdzMSoHaJ'
         }
     }
 
