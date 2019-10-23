@@ -2,19 +2,23 @@
 
 {% block content %}
 
-<div id='metadata'>
+<div id='metadata' class='container float-left'>
     <h1><strong>Name:</strong> {{ data['vid_name'] }}</h1>
+    <h2>Publishing to Facebook account {{ current_user.facebook_id }}</h2>
     <img src="{{ data['vid_icon'] }}">
 </div>
-<div class='container' id='submit-form'> 
+<div class='container float-left' id='submit-form'> 
     <form action = "{{ url_for('send_facebook', proj_id=data['proj_id']) }}" method="post">    
-        <div class='form-group'>
-            <input type="text" name="facebook_title" value='{{ data["vid_name"]}}'>Enter title</input>
+        <div class='form-group'>    
+            <label for="facebook_title">Title</label>
+            <input class="form-control" type="text" name="facebook_title" id="facebook_title" value='{{ data["vid_name"]}}'></input>
         </div>
-        <div class='form-group'>
-            <textarea rows="5" cols="50" name="facebook_body">Enter description here</textarea>
+        <div class='form-group'>            
+            <label for="facebook_body">Description</label>
+            <textarea class='form-control' rows="5" cols="50" name="facebook_body" id="facebook_body" placeholder="Enter description here..."></textarea>
         </div>    
-        <button type="submit" class="btn"></button>
+        <button type="submit" class="btn">Submit</button>
     </form>
 </div>
+
 {% endblock %}

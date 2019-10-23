@@ -1,9 +1,18 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Project ID: {{ proj_id }}</h1>
-    <form action = "{{ url_for('send_twitter', proj_id=proj_id) }}" method="post">
-        <textarea rows="5" cols="50" name="tweet_body">Enter tweet information here</textarea>
-        <input type="submit" value="Tweet video">
+<div id='metadata'>
+    <h1><strong>Name:</strong> {{ data['vid_name'] }}</h1>
+    <h2>Publishing to Twitter account: @{{ current_user.twitter_id }}</h2>
+    <img src="{{ data['vid_icon'] }}">
+</div>
+<div class='container' id='submit-form'> 
+    <form action = "{{ url_for('send_twitter', proj_id=data['proj_id']) }}" method="post">    
+        <div class='form-group'>            
+            <label for="twitter_body">Tweet</label>
+            <textarea rows="5" cols="50" name="twitter_body" placeholder="Enter tweet here..." id="twitter_body" class="form-control"></textarea>
+        </div>    
+        <button type="submit" class="btn">Submit</button>
     </form>
+</div>    
 {% endblock %}

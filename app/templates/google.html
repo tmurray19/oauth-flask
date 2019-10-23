@@ -1,22 +1,34 @@
 {% extends "base.html" %}
 
 {% block content %}
-
-    <h1>Project ID: {{ proj_id }}</h1>
-    <form action = "{{ url_for('send_youtube', proj_id=proj_id) }}" method="post">
-        <br>Title:<br>
-        <input type="text" name="title">Enter title</input>
-        <br>Description:<br>
-        <textarea rows="5" cols="50" name="yt_desc">Enter description</textarea>
-        <br>Privacy:<br>
-        <select name="privacy">
+<div id='metadata' class='container float-left'>
+    <h1><strong>Name:</strong> {{ data['vid_name'] }}</h1>
+    <h2>Publishing to YouTube account: {{ current_user.youtube_id }}</h2>
+    <img src="{{ data['vid_icon'] }}">
+</div>
+<div class='container float-left' id='submit-form'> 
+    <form action = "{{ url_for('send_youtube', proj_id=data['proj_id']) }}" method="post">    
+        <div class='form-group'>            
+            <label for="yt_title">Title</label>
+            <input type="text" name="yt_title" value='{{ data["vid_name"]}}' id="yt_title" class="form-control"></input>
+        </div>
+        <div class='form-group'>            
+            <label for="yt_desc">Description</label>
+            <textarea rows="5" cols="50" name="yt_desc" placeholder="Enter description here..." id="yt_desc" class="form-control"></textarea>
+        </div>  
+        <div class="form-group">
+            <label for="privacy">Privacy</label>
+            <select class="form-control" id="privacy" name="privacy">
                 <option value="public">Public</option>
                 <option value="private">Private</option>
                 <option value="unlisted">Unlisted</option>
-        </select>
-        <br>Tags:<br>
-        <textarea rows="5" cols="50" name="tags">Enter tags (single words, separate by commas (',') )</textarea>
-        <br><br>
-        <input type="submit" value="Publish video to YouTube">
+            </select>
+        </div>          
+        <div class='form-group'>
+            <label for="yt_tags">Tags</label>
+            <textarea rows="5" cols="50" name="yt_tags" placeholder="Enter tags [single words, separate by commas (',')]" id="yt_tags" class="form-control"></textarea>
+        </div>  
+        <button type="submit" class="btn">Publish video to YouTube</button>
     </form>
+</div>
 {% endblock %}
