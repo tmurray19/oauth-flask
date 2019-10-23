@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+
+{% block content %}
+<p>Your request has been recieved. Please check back later for status. <a href="{{ url_for('publish_land', uid=current_user.uid, companyid=current_user.coid, projectid=proj_id) }}">Return to upload portal.</a></p>
+{% endblock %}
