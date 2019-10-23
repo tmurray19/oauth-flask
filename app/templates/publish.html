@@ -6,25 +6,78 @@
         <p><b>Error</b>: {{ message }}</p>
     {% endfor %}
 
-    <h1>You are publishing a video: {{ proj_id }}</h1>
-    <h2>Company ID: {{ current_user.coid }}</h2>
-    <h2>User ID: {{ current_user.uid }}</h2>
-
+    <h1>Publishing project: {{ data['vid_name'] }}</h1>
     Here are your current authenticated services:
     
-    {% if current_user.twitter_access_token is not none %}
-        <p><a href="{{ url_for('publish_twitter', proj_id=proj_id) }}">Upload video to Twitter</a></p>
+    {% if status['twitter'] is none %}
+        {% if current_user.twitter_access_token is not none %}
+            <p><a href="{{ url_for('publish_twitter', proj_id=data['proj_id']) }}">Upload video to Twitter</a></p>
+        {% endif %}
+    {% endif %}    
+    {% if status['twitter'] is not none %}
+        {% if status['twitter'] == 1 %}
+            <p>Video uploaded to Twitter successfully!</p>
+        {% endif %}
+        {% if status['twitter'] == -1 %}
+            <p>Error occured during Twitter upload.<a href="{{ url_for('publish_twitter', proj_id=data['proj_id']) }}">Please try again</a></p>
+        {% endif %}
+        {% if status['twitter'] == 0 %}
+            <p>Twitter upload still processing...</p>
+        {% endif %}       
+        {% if status['twitter'] == 5 %}
+            <p>Twitter upload still processing... (Taking too long? Click <a href="{{ url_for('publish_twitter', proj_id=data['proj_id']) }}">here</a> to try again)</p>
+        {% endif %}
     {% endif %}
 
-    {% if current_user.youtube_credentials is not none %}
-        <p><a href="{{ url_for('publish_youtube', proj_id=proj_id) }}">Upload video to Youtube </a></p>
+
+    {% if status['youtube'] is none %}
+        {% if current_user.youtube_credentials is not none %}
+            <p><a href="{{ url_for('publish_youtube', proj_id=data['proj_id']) }}">Upload video to Youtube </a></p>
+        {% endif %}
     {% endif %}
 
-    {% if current_user.facebook_access_token is not none%}
-        <p><a href="{{ url_for('publish_facebook', proj_id=proj_id) }}">Upload video to Facebook</a></p>   
+    {% if status['youtube'] is not none %}
+        {% if status['youtube'] == 1 %}
+            <p>Video uploaded to Youtube successfully!</p>
+        {% endif %}
+        {% if status['youtube'] == -1 %}
+            <p>Error occured during Youtube upload.<a href="{{ url_for('publish_youtube', proj_id=data['proj_id']) }}">Please try again</a></p>
+        {% endif %}        
+        {% if status['youtube'] == 0 %}
+            <p>Youtube upload still processing...</p>
+        {% endif %}
+        {% if status['youtube'] == 5 %}
+            <p>Youtube upload still processing... (Taking too long? Click <a href="{{ url_for('publish_youtube', proj_id=data['proj_id']) }}">here</a> to try again)</p>
+        {% endif %}       
     {% endif %}
+
+    
+    {% if status['facebook'] is none %}
+        {% if current_user.facebook_access_token is not none%}
+            <p><a href="{{ url_for('publish_facebook', proj_id=data['proj_id']) }}">Upload video to Facebook</a></p>   
+        {% endif %}
+    {% endif %}
+
+    {% if status['facebook'] is not none %}
+        {% if status['facebook'] == 1 %}
+            <p>Video uploaded to Facebook successfully!</p>
+        {% endif %}
+        {% if status['facebook'] == -1 %}
+            <p>Error occured during Facebook upload.<a href="{{ url_for('publish_facebook', proj_id=data['proj_id']) }}">Please try again</a></p>
+        {% endif %}        
+        {% if status['facebook'] == 0 %}
+            <p>Facebook upload still processing...</p>
+        {% endif %}   
+        {% if status['facebook'] == 5 %}
+            <p>Facebook upload still processing... (Taking too long? Click <a href="{{ url_for('publish_facebook', proj_id=data['proj_id']) }}">here</a> to try again)</p>
+        {% endif %}   
+    {% endif %}
+
+
+
 
     {% if current_user.insta_access_token is not none %}
         <p><a href="{{ url_for('send_insta') }}">Upload video to Instagram</a></p>
     {% endif %}  
+
 {% endblock %}
