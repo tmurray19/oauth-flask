@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Authenticate accounts here</h1>
     {% for message in get_flashed_messages() %}
         <p><b>Error</b>: {{ message }}</p>
     {% endfor %}
