@@ -9,10 +9,12 @@ from app.models import User
 import random, time
 from requests_oauthlib import OAuth1
 import logging
+from datetime import datetime
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
+import googleapiclient.errors
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -30,15 +32,19 @@ def index():
         return redirect("http://beta.videosherpa.com")
     return render_template('index.html')
 
-# This is our request page for the user, it creates an account under the uid and sends them to the auth page
+# This is our request page for the user, it creates an accosunt under the uid and sends them to the auth page
 @app.route('/connect/COID=<int:companyid>/UID=<int:userid>')
 def init_connect(userid, companyid):
+    # Logout user
+    logout_user()
     # If the user doesn't exist, create an account and store it in the database
     if current_user.is_anonymous:
         user = User.query.filter_by(coid=companyid).first()
         logging.debug("Logging user in with company id {}".format(companyid))
+        print("Logging user in with company id {}".format(companyid))
         if not user:
             logging.debug("User doesn't exist, creating account in database")
+            print("User doesn't exist, creating account in database")
             user = User(uid=userid, coid=companyid)
             db.session.add(user)
             db.session.commit()
@@ -46,6 +52,7 @@ def init_connect(userid, companyid):
         # Log the user in
         login_user(user, True)
     # Send them to the landing page, where they authenticate other services
+    logging.debug("Current User: {}".format(current_user))
     return render_template('index.html')
 
 # This shows the user the upload pages for the accounts they have unlocked
@@ -59,7 +66,12 @@ def publish_land(uid, companyid, projectid):
             logging.error("User with coid={} and uid={} doesn't exist in database".format(companyid, uid))
             return render_template('invalid.html')
         login_user(user, True)
-    return render_template('publish.html', proj_id=projectid)
+    
+    json_data = get_metadata(projectid)
+
+    upload_status = get_upload_status(projectid)
+
+    return render_template('publish.html', data=json_data, status=upload_status)
 
 # AUTHORIZATION SERVICES
 @app.route('/authorize/<provider>')
@@ -72,7 +84,7 @@ def oauth_authorize(provider):
         # Create an OAuth flow to the google servers using the info in the config
         logging.debug("Beginning dance for google OAuth")
         flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-            app.config['CLIENT_SECRETS_FILE'], 
+            app.config['CLIENT_SECRETS_FILE'],
             scopes=app.config['SCOPES']
         )
 
@@ -114,9 +126,23 @@ def oauth2callback():
     flow.fetch_token(authorization_response=authorization_response) 
     credentials = flow.credentials
 
+    youtube = googleapiclient.discovery.build(
+        app.config['YOUTUBE_API_SERVICE_NAME'], app.config['YOUTUBE_API_VERSION'], credentials=credentials)
+
+    logging.debug("Getting Youtube ID")
+    channel_id_getter = youtube.channels().list(part="id", mine=True)
+
+    response = channel_id_getter.execute()
+    channel_id = response['items'][0]['id']
+
+
+    channel_name_getter = youtube.channels().list(part="snippet", id=channel_id)
+    response = channel_name_getter.execute()
+    channel_name = response['items'][0]['snippet']['title']
 
     logging.debug("Writing user credentials to database for user with coid={} and uid={}".format(current_user.coid, current_user.uid))
     current_user.youtube_credentials = credentials_to_dict(credentials)
+    current_user.youtube_id = channel_name
     db.session.commit()
     logging.debug("User successfully authenticated")
     return redirect(url_for('index'))
@@ -125,23 +151,27 @@ def oauth2callback():
 def oauth_callback(provider):
     oauth = OAuthSignIn.get_provider(provider)
 
-    social_id, access_token, access_token_secret, fb_page_id = oauth.callback()
+    social_id, access_token, access_token_secret, fb_page_id, username = oauth.callback()
     if social_id is None:
         logging.debug("Authentication failed")
         flash('Authentication failed.')
         return redirect(url_for('index'))
     if provider == 'twitter':
         logging.debug("Writing twitter credentials to account for user with coid={} and uid={}".format(current_user.coid, current_user.uid))
+        
+        current_user.twitter_id = username
         current_user.twitter_access_token = access_token
         current_user.twitter_access_token_secret = access_token_secret
+        
         db.session.commit()
     elif provider == 'facebook':
 
         logging.debug("user with coid={} and uid={} first page access token is being written to the database".format(current_user.coid, current_user.uid))
-
+        
+        current_user.facebook_id = username
         current_user.facebook_access_token_secret = access_token_secret
-
         current_user.facebook_access_token = fb_page_id
+
         db.session.commit()
     return redirect(url_for('index'))
 
@@ -181,182 +211,97 @@ def publish_facebook(proj_id):
 @app.route('/upload/twitter/<int:proj_id>', methods=['POST'])
 def send_twitter(proj_id):
     # Twitter status - This is the tweet
-    stat = request.form['tweet_body']
+    stat = request.form['twitter_body']
 
-    creds = app.config['OAUTH_CREDENTIALS']['twitter']
-
-    # File location
-    VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
-
-    logging.debug("Project {} for upload to Twitter".format(proj_id))
-    logging.debug("Request made by user with coid={} and uid={}".format(current_user.coid, current_user.uid))
-    logging.debug("Tweet body for {} is {} ".format(proj_id, stat))
-
-    # Create OAuth1 flow
-    oauth_connection = OAuth1(
-        creds['id'],
-        creds['secret'],
-        current_user.twitter_access_token,
-        current_user.twitter_access_token_secret
-    )
-
-    # Open file for uploading
-    bytes_sent = 0
-    total_bytes = os.path.getsize(VIDEO_FILENAME)
-    file = open(VIDEO_FILENAME, 'rb')
-
- 
-    # Initialise request
-    logging.debug("Initialising request for {}".format(proj_id))
-    request_data = {
-        'command': 'INIT',
-        'media_type': 'video/mp4',
-        'total_bytes': total_bytes,
-        'media_category': 'tweet_video'
+    twitter_json = {
+        'social_media': 'twitter',
+        'proj_id': proj_id,
+        'twitter_body': stat,
+        'coid': current_user.coid,
+        'uid': current_user.uid,
+        'access_token': current_user.twitter_access_token,
+        'access_token_secret': current_user.twitter_access_token_secret,
+        'upload_status': 0,
+        'status': False,
+        'dateRequested': datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
     }
 
-    req = requests.post(url=app.config['MEDIA_ENDPOINT_URL'], data=request_data, auth=oauth_connection)
-    media_id = req.json()['media_id']
-    
-    segment_id = 0
-    bytes_sent = 0
+    logging.debug("Writing upload status to file")
+    with open(
+        os.path.join(
+            app.config['BASE_DIR'],
+            app.config['UPLOAD_QUEUE'],
+            str(proj_id) + "_" + twitter_json['social_media'] + "_upload_status.json"
+        ), 'w'
+    ) as json_write:
+        json.dump(twitter_json, json_write)
 
-    # Video needs to be uploaded in chunks
-    while bytes_sent < total_bytes:
-        chunk = file.read(4*1024*1024)
-        
-        logging.debug("APPEND FOR {}".format(proj_id))
-        
-        request_data = {
-            'command': 'APPEND',
-            'media_id': media_id,
-            'segment_index': segment_id
-        }
-
-        files = {
-            'media':chunk
-        }
-        
-        req = requests.post(url=app.config['MEDIA_ENDPOINT_URL'], data=request_data, files=files, auth=oauth_connection)
-
-        # If status code isn't in 200 range, something has gone wrong
-        if req.status_code < 200 or req.status_code > 299:
-            logging.error("Error occured in uploading of file {}:\n Status Code: {} \n Details: {}".format(proj_id, req.status_code, req.text))
-            sys.exit(0)
-
-        segment_id = segment_id + 1
-        bytes_sent = file.tell()
-
-        logging.debug('{} of {} bytes uploaded for {}'.format(str(bytes_sent), str(total_bytes), proj_id))
-
-    logging.debug('Upload chunks complete for {}.'.format(proj_id))
-
-    logging.debug("FINALIZE")
-
-    request_data = {
-      'command': 'FINALIZE',
-      'media_id': media_id
-    }
-
-    req = requests.post(url=app.config['MEDIA_ENDPOINT_URL'], data=request_data, auth=oauth_connection)
-    logging.debug(req.json())
-
-    processing_info = req.json().get('processing_info', None)
-    check_status(processing_info, media_id, oauth_connection, proj_id)
-
-    request_data = {
-      'status': stat,
-      'media_ids': media_id
-    }
-
-    req = requests.post(url=app.config['POST_TWEET_URL'], data=request_data, auth=oauth_connection)
-    logging.debug(req.json())
-
-    twitter_status = "Uploaded successfully"
-    logging.debug("File {} uploaded successfully".format(proj_id))
-    return twitter_status
+    return render_template('requested.html', proj_id=proj_id)
 
 
 @login_required
 @app.route('/upload/youtube/<int:proj_id>', methods=['POST'])
 def send_youtube(proj_id):
-    credentials = google.oauth2.credentials.Credentials(**current_user.youtube_credentials)
+
+    youtube_json = {
+        'social_media': 'youtube',
+        'proj_id': proj_id,
+        'yt_title': request.form['yt_title'],
+        'yt_desc': request.form['yt_desc'],
+        'yt_tags': request.form['yt_tags'],
+        'yt_privacy': request.form['privacy'],
+        'coid': current_user.coid,
+        'uid': current_user.uid,
+        'youtube_credentials': current_user.youtube_credentials,
+        'upload_status': 0,
+        'status': False,
+        'dateRequested': datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
+    }
+
+    logging.debug("Writing upload status to file")
+    with open(
+        os.path.join(
+            app.config['BASE_DIR'],
+            app.config['UPLOAD_QUEUE'],
+            str(proj_id) + "_" + youtube_json['social_media'] + "_upload_status.json"
+        ), 'w'
+    ) as json_write:
+        json.dump(youtube_json, json_write)
     
-    VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
-    
-    logging.debug("Project {} for upload to Youtube".format(proj_id))
-    logging.debug("Request made by user with coid={} and uid={}".format(current_user.coid, current_user.uid))
+        
+    return render_template('requested.html', proj_id=proj_id)
 
-    youtube = build(
-        "youtube", 
-        "v3",
-        credentials=credentials
-    )
-
-    body=dict(
-        snippet=dict(
-            title=request.form['title'],
-            description=request.form['yt_desc'],
-            tags=request.form['tags'],
-            categoryId="22"
-        ),
-        status=dict(
-            privacyStatus=request.form['privacy']
-        )
-    )
-
-    logging.debug("Request data is {}, creating insert request for {}".format(body, proj_id))
-
-    # TODO: Implicity file name
-    insert_request = youtube.videos().insert(
-      part=",".join(list(body.keys())),
-      body=body,
-      media_body=MediaFileUpload(VIDEO_FILENAME, chunksize=-1, resumable=True)
-    )
-
-    logging.debug("Calling upload function for {}...".format(proj_id))
-    resumable_upload(insert_request, proj_id)
-    
-    return "Uploaded video successfully!"
 
 
 @login_required
 @app.route('/upload/facebook/<int:proj_id>', methods=['POST'])
 def send_facebook(proj_id):
-    url='https://graph-video.facebook.com/{}/videos?access_token={}'.format(
-        current_user.facebook_access_token,
-        current_user.facebook_access_token_secret
-    )
-    name = request.form['facebook_title']
-    desc = request.form['facebook_body']
-    VIDEO_FILENAME = os.path.join('/mnt/csae48d5df47deax41bcxbaa/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
-    VIDEO_LOC = os.path.join('N:/project/videos/', str(proj_id), str(proj_id)+'_edited.mp4')
-    VIDEO_FILENAME = str(proj_id) + "_edited.mp4"
-    
-    payload = {
-        'title': name,
-        'description': desc,
+
+    facebook_json = {
+        'social_media': 'facebook',
+        'proj_id': proj_id,
+        'facebook_title': request.form['facebook_title'],
+        'facebook_body': request.form['facebook_body'],
+        'coid': current_user.coid,
+        'uid': current_user.uid,
+        'access_token': current_user.facebook_access_token,
+        'access_token_secret': current_user.facebook_access_token_secret,
+        'upload_status': 0,
+        'status': False,
+        'dateRequested': datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
     }
-    files = {
-        'source': (
-            VIDEO_FILENAME, 
-            open(VIDEO_LOC, 'rb'), 
-            'video/mp4'
-            )
-        }
 
-    logging.debug("Project {} for upload to Facebook".format(proj_id))
-    logging.debug("Request made by user with coid={} and uid={}".format(current_user.coid, current_user.uid))
+    with open(
+        os.path.join(
+            app.config['BASE_DIR'],
+            app.config['UPLOAD_QUEUE'],
+            str(proj_id) + "_" + facebook_json['social_media'] + "_upload_status.json"
+        ), 'w'
+    ) as json_write:
+        json.dump(facebook_json, json_write)
+    
+    return render_template('requested.html', proj_id=proj_id)
 
-    flag = requests.post(url, data=payload, files=files).text
-    logging.debug(flag)
-    fb_res = json.loads(flag)
-    if not fb_res["error"]:
-        logging.debug("Project {} uploaded successfully".format(proj_id))
-        return "Video successfully uploaded to Facebook"
-    else:
-        logging.debug("Error occured in upload of {}\n{}".format(proj_id, fb_res))
-        return "There was an error during upload. Please try again or contact the Video Sherpa administrators."
 
 @login_required
 @app.route('/upload/instagram')
@@ -376,85 +321,18 @@ def credentials_to_dict(credentials):
     }
 
 
-def resumable_upload(insert_request, proj_id):
-    response = None
-    error = None
-    retry = 0
-    while response is None:
-        try:
-            logging.debug("Uploading file for {}".format(proj_id))
-            status, response = insert_request.next_chunk()
-            if 'id' in response:
-                logging.debug("Video id '{}' was successfully uploaded.".format(response['id']))
-            else:                
-                logging.error("The upload for file {} failed with an unexpected response: {}".format(proj_id, response))       
-                exit("The upload failed with an unexpected response: %s" % response)                
-
-        except HttpError as e:
-            if e.resp.status in app.config['RETRIABLE_STATUS_CODES']:
-                error = "A retriable HTTP error {} occurred for {}:\n Content: {}".format(e.resp.status, proj_id, e.content)
-            else:
-                raise
-        except app.config['RETRIABLE_EXCEPTIONS'] as e:
-            error = "A retriable error occurred for {}: {}".format(proj_id, e)
-        
-        if error is not None:
-            logging.error(error)
-            retry += 1
-        if retry > app.config['MAX_RETRIES']:
-            logging.error("No longer attempting to retry for {}.".format(proj_id))
-            exit("No longer attempting to retry.")
-        
-        max_sleep = 2 ** retry
-        sleep_seconds = random.random() * max_sleep
-        logging.debug("Sleeping {} seconds and then retrying for {}...".format(sleep_seconds, proj_id))
-        time.sleep(sleep_seconds)
-
-
-def check_status(processing_info, media_id, oauth_connection, proj_id):
-    '''
-    Checks video processing status
-    '''
-    if processing_info is None:
-      return
-
-    state = processing_info['state']
-
-    logging.debug('Media processing status for {} is {}'.format(proj_id, state))
-
-    if state == u'succeeded':
-      return
-
-    if state == u'failed':
-      sys.exit(0)
-
-    check_after_secs = processing_info['check_after_secs']
-    
-    logging.debug('Checking after {} seconds for {}'.format(str(check_after_secs), proj_id))
-    time.sleep(check_after_secs)
-
-    logging.debug('{} STATUS'.format(proj_id))
-
-    request_params = {
-      'command': 'STATUS',
-      'media_id': media_id
-    }
-
-    req = requests.get(url=app.config['MEDIA_ENDPOINT_URL'], params=request_params, auth=oauth_connection)
-
-    processing_info = req.json().get('processing_info', None)
-    check_status(processing_info, media_id, oauth_connection, proj_id)
-
 def get_metadata(proj_id):
-    base_dir = os.path.join(app.config['BASE_DIR'], app.config['VIDS_LOCATION'], proj_id, 'FinalSubclip.json')
-    file_location = os.path.join(base_dir, 'FinalSubclip.json')
+    base_dir = os.path.join(app.config['BASE_DIR'], app.config['VIDS_LOCATION'], str(proj_id))
+    file_location = os.path.join(base_dir, 'FinalSubclipJson.json')
 
     json_data = json.load(open(file_location, 'r'))
 
     try:
-        vid_icon = json_data['CutAwayFootage'][0]['Meta']['Name'] + ".jpg"
-    except KeyError:
-        vid_icon = json_data['InterviewFootage'][0]['Meta']['Name'] + ".jpg"
+        vid_icon = next(iter(json_data['CutAwayFootage']))
+        vid_icon = json_data['CutAwayFootage'][vid_icon]['Meta']['name'] + ".jpg"
+    except StopIteration:
+        vid_icon = next(iter(json_data['InterviewFootage']))
+        vid_icon = json_data['InterviewFootage'][vid_icon]['Meta']['name'] + ".jpg"
     except:
         logging.error("Unknown error in creation of metadata for '{}'".format(proj_id))
         logging.exception('')
@@ -463,11 +341,87 @@ def get_metadata(proj_id):
     vid_icon = os.path.join(base_dir, vid_icon)
 
     data = {
-        'proj_id': proj_id,
+        'proj_id': str(proj_id),
         'vid_name': json_data['Name'],
         'vid_icon': vid_icon,
     }
 
+    print(data)
+
     return data
 
 
+def get_upload_status(proj_id):
+    # Checks upload status folder for upload files
+    # If they exist, checks status
+    # If status is true, removes upload button option for folder
+    # Else says an error occured, contact admins
+
+    twitter_status = None
+    try:
+        twitter_file = os.path.join(
+            app.config['BASE_DIR'],
+            app.config['UPLOAD_QUEUE'],
+            str(proj_id) + "_twitter_upload_status.json"
+        )
+        json_file = open(twitter_file, 'r')
+        json_data = json.load(json_file)
+        twitter_status = json_data['upload_status']
+
+        current_time = time.time()
+
+        upload_timestamp = json_data['dateRequested']
+
+        if current_time - upload_timestamp > 300:
+            twitter_status = 5
+
+    except:
+        pass
+
+    facebook_status = None
+    try:
+        facebook_file = os.path.join(
+            app.config['BASE_DIR'],
+            app.config['UPLOAD_QUEUE'],
+            str(proj_id) + "_facebook_upload_status.json"
+        )
+        json_file = open(facebook_file, 'r')
+        json_data = json.load(json_file)
+        facebook_status = json_data['upload_status']
+
+        current_time = time.time()
+
+        upload_timestamp = json_data['dateRequested']
+
+        if current_time - upload_timestamp > 300:
+            facebook_status = 5
+
+    except:
+        pass
+
+    youtube_status = None
+    try:
+        youtube_file = os.path.join(
+            app.config['BASE_DIR'],
+            app.config['UPLOAD_QUEUE'],
+            str(proj_id) + "_youtube_upload_status.json"
+        )
+        json_file = open(youtube_file, 'r')
+        json_data = json.load(json_file)
+        youtube_status = json_data['upload_status']
+
+        current_time = time.time()
+
+        upload_timestamp = json_data['dateRequested']
+
+        if current_time - upload_timestamp > 300:
+            youtube_status = 5
+
+    except:
+        pass
+
+    return {
+        "twitter": twitter_status, 
+        "facebook": facebook_status, 
+        "youtube": youtube_status
+    }
