@@ -22,6 +22,8 @@ class Config(object):
     VIDS_LOCATION = os.environ.get('VIDS_LOCATION') or "Videos"
     LOGS_LOCATION = os.environ.get('LOGS_LOCATION') or "logs" 
     AUTH_LOG = os.environ.get('AUTH_LOG') or 'authFlask'
+    UPLOAD_QUEUE = os.environ.get('UPLOAD_QUEUE') or 'uploadQueue'
+    UPLOAD_LOGS = os.environ.get('UPLOAD_LOGS') or 'uploadWatcher'
 
     OAUTH_CREDENTIALS = os.environ.get('OAUTH_CREDENTIALS') or {
         'facebook': {
@@ -57,7 +59,7 @@ class Config(object):
 
     RETRIABLE_STATUS_CODES = [500, 502, 503, 504]
     
-    #CLIENT_SECRETS_FILE = "N:/oath/flask-oauth-example/client_secrets.json"
+    #CLIENT_SECRETS_FILE = "N:/sherpa-oauth/client_secrets.json"
     CLIENT_SECRETS_FILE = "/home/sherpa-render/auth-sherpa/client_secrets.json"
 
     YOUTUBE_UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload"
