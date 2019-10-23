@@ -88,6 +88,7 @@ class FacebookSignIn(OAuthSignIn):
             me.get('email'),
             me['accounts']['data'][0].get('access_token'),
             me['accounts']['data'][0].get("id"),
+            None
         )
 
 
@@ -125,5 +126,5 @@ class TwitterSignIn(OAuthSignIn):
         social_id = 'twitter$' + str(me.get('id'))
         username = me.get('screen_name')
         # Provide twitter username, and OAuth access token and secret
-        return social_id, oauth_session.access_token, oauth_session.access_token_secret, None   
+        return social_id, oauth_session.access_token, oauth_session.access_token_secret, None, username
 
