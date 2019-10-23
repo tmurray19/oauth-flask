@@ -18,13 +18,18 @@ class User(UserMixin, db.Model):
     # Access tokens
     twitter_access_token = db.Column(db.String(64), nullable=True)
     twitter_access_token_secret = db.Column(db.String(64), nullable=True)
+    twitter_id = db.Column(db.String(64), nullable=True)
+
     facebook_access_token = db.Column(db.String(64), nullable=True)
     facebook_access_token_secret = db.Column(db.String(64), nullable=True)
+    facebook_id = db.Column(db.String(64), nullable=True)
+
     insta_access_token = db.Column(db.String(64), nullable=True)
     insta_access_token_secret = db.Column(db.String(64), nullable=True)
-    #youtube_access_token = db.Column(db.String(64), nullable=True)
-    #youtube_access_token_secret = db.Column(db.String(64), nullable=True)
+
     youtube_credentials = db.Column(db.PickleType, nullable=True)
+    youtube_id = db.Column(db.String(64), nullable=True)
+
     linkedin_access_token = db.Column(db.String(64), nullable=True)
     linkedin_access_token_secret = db.Column(db.String(64), nullable=True)
 
