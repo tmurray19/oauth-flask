@@ -31,8 +31,8 @@ class Config(object):
             'secret': 'e7ab5768f06f329206e960e0965eb78c'
         },
         'twitter': {
-            'id': 'tJr2grTKu1j0NKH6YuHy4KQxI',
-            'secret': 'Qj6SJZWFSVio8ORuALs0nuFc3aVmL6gsHwndkJF6AWYRWnMT3e'
+            'id': 'UID4eI5FJv1yeyoiuPW8aHE3X',
+            'secret': 'PxZCfzdDfzAl5ofk2pSJsrTmwOpy4Bh9OUHuJuIsIEoWx3jfip'
         },
         'google': {
             'id': '705996956550-pdtpes13chavp1sl2j6vpei968n1hach.apps.googleusercontent.com',
