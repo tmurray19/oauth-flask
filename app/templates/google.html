@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div id='metadata' class='container float-left'>
+<div id='metadata' class='container-fluid float-left'>
     <h1><strong>Name:</strong> {{ data['vid_name'] }}</h1>
     <h2>Publishing to YouTube account: {{ current_user.youtube_id }}</h2>
     <img src="{{ data['vid_icon'] }}">
 </div>
-<div class='container float-left' id='submit-form'> 
+<div class='container-fluid float-left' id='submit-form'> 
     <form action = "{{ url_for('send_youtube', proj_id=data['proj_id']) }}" method="post">    
         <div class='form-group'>            
             <label for="yt_title">Title</label>
