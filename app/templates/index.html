@@ -7,19 +7,19 @@
     {% endfor %}
 
     {% if current_user.twitter_access_token is not none %}
-        <p>Twitter authenticated</p>
+        <p>Twitter authenticated. <a href="{{ url_for('oauth_authorize', provider='twitter') }}">Reauthorize Twitter</a></p>
         {% else %}
         <p><a href="{{ url_for('oauth_authorize', provider='twitter') }}">Authorize Twitter</a></p>
     {% endif %}
 
     {% if current_user.youtube_credentials is not none %}
-        <p>Youtube authorized</p>
+        <p>Youtube authorized. <a href="{{ url_for('oauth_authorize', provider='google') }}">Reauthorize Youtube</a></p>
         {% else %}
         <p><a href="{{ url_for('oauth_authorize', provider='google') }}">Authorize Youtube</a></p>
     {% endif %}
 
     {% if current_user.facebook_access_token is not none%}
-        <p>Facebook authenticated</p>
+        <p>Facebook authenticated. <a href="{{ url_for('oauth_authorize', provider='facebook') }}">Reauthorize Facebook</a></p>
         {% else %}
         <p><a href="{{ url_for('oauth_authorize', provider='facebook') }}">Authorize Facebook</a></p>            
     {% endif %}

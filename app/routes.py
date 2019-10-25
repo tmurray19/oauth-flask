@@ -112,68 +112,74 @@ def oauth_authorize(provider):
 # For youtube
 @app.route('/oauth2callback')
 def oauth2callback():
-    state = session['state']
-    logging.debug("Reading google credentials to authenticate user")
-    flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-        app.config['CLIENT_SECRETS_FILE'], 
-        scopes=app.config['SCOPES'], 
-        state=state
-    )
-    
-    flow.redirect_uri = url_for('oauth2callback', _external=True)
-    
-    authorization_response = request.url
-    flow.fetch_token(authorization_response=authorization_response) 
-    credentials = flow.credentials
+    try:
+        state = session['state']
+        logging.debug("Reading google credentials to authenticate user")
+        flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
+            app.config['CLIENT_SECRETS_FILE'], 
+            scopes=app.config['SCOPES'], 
+            state=state
+        )
+        
+        flow.redirect_uri = url_for('oauth2callback', _external=True)
+        
+        authorization_response = request.url
+        flow.fetch_token(authorization_response=authorization_response) 
+        credentials = flow.credentials
 
-    youtube = googleapiclient.discovery.build(
-        app.config['YOUTUBE_API_SERVICE_NAME'], app.config['YOUTUBE_API_VERSION'], credentials=credentials)
+        youtube = googleapiclient.discovery.build(
+            app.config['YOUTUBE_API_SERVICE_NAME'], app.config['YOUTUBE_API_VERSION'], credentials=credentials)
 
-    logging.debug("Getting Youtube ID")
-    channel_id_getter = youtube.channels().list(part="id", mine=True)
+        logging.debug("Getting Youtube ID")
+        channel_id_getter = youtube.channels().list(part="id", mine=True)
 
-    response = channel_id_getter.execute()
-    channel_id = response['items'][0]['id']
+        response = channel_id_getter.execute()
+        channel_id = response['items'][0]['id']
 
 
-    channel_name_getter = youtube.channels().list(part="snippet", id=channel_id)
-    response = channel_name_getter.execute()
-    channel_name = response['items'][0]['snippet']['title']
+        channel_name_getter = youtube.channels().list(part="snippet", id=channel_id)
+        response = channel_name_getter.execute()
+        channel_name = response['items'][0]['snippet']['title']
 
-    logging.debug("Writing user credentials to database for user with coid={} and uid={}".format(current_user.coid, current_user.uid))
-    current_user.youtube_credentials = credentials_to_dict(credentials)
-    current_user.youtube_id = channel_name
-    db.session.commit()
-    logging.debug("User successfully authenticated")
-    return redirect(url_for('index'))
+        logging.debug("Writing user credentials to database for user with coid={} and uid={}".format(current_user.coid, current_user.uid))
+        current_user.youtube_credentials = credentials_to_dict(credentials)
+        current_user.youtube_id = channel_name
+        db.session.commit()
+        logging.debug("User successfully authenticated")
+        return redirect(url_for('index'))
+    except:
+        return render_template('error.html')
 
 @app.route('/callback/<provider>')
 def oauth_callback(provider):
-    oauth = OAuthSignIn.get_provider(provider)
+    try:
+        oauth = OAuthSignIn.get_provider(provider)
 
-    social_id, access_token, access_token_secret, fb_page_id, username = oauth.callback()
-    if social_id is None:
-        logging.debug("Authentication failed")
-        flash('Authentication failed.')
+        social_id, access_token, access_token_secret, fb_page_id, username = oauth.callback()
+        if social_id is None:
+            logging.debug("Authentication failed")
+            flash('Authentication failed.')
+            return redirect(url_for('index'))
+        if provider == 'twitter':
+            logging.debug("Writing twitter credentials to account for user with coid={} and uid={}".format(current_user.coid, current_user.uid))
+            
+            current_user.twitter_id = username
+            current_user.twitter_access_token = access_token
+            current_user.twitter_access_token_secret = access_token_secret
+            
+            db.session.commit()
+        elif provider == 'facebook':
+
+            logging.debug("user with coid={} and uid={} first page access token is being written to the database".format(current_user.coid, current_user.uid))
+            
+            current_user.facebook_id = username
+            current_user.facebook_access_token_secret = access_token_secret
+            current_user.facebook_access_token = fb_page_id
+
+            db.session.commit()
         return redirect(url_for('index'))
-    if provider == 'twitter':
-        logging.debug("Writing twitter credentials to account for user with coid={} and uid={}".format(current_user.coid, current_user.uid))
-        
-        current_user.twitter_id = username
-        current_user.twitter_access_token = access_token
-        current_user.twitter_access_token_secret = access_token_secret
-        
-        db.session.commit()
-    elif provider == 'facebook':
-
-        logging.debug("user with coid={} and uid={} first page access token is being written to the database".format(current_user.coid, current_user.uid))
-        
-        current_user.facebook_id = username
-        current_user.facebook_access_token_secret = access_token_secret
-        current_user.facebook_access_token = fb_page_id
-
-        db.session.commit()
-    return redirect(url_for('index'))
+    except:
+        return render_template('error.html')
 
 # UI Upload helpers
 @login_required
