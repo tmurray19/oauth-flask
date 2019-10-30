@@ -37,77 +37,92 @@ def index():
 def init_connect(userid, companyid):
     # Logout user
     logout_user()
-    # If the user doesn't exist, create an account and store it in the database
-    if current_user.is_anonymous:
-        user = User.query.filter_by(coid=companyid).first()
-        logging.debug("Logging user in with company id {}".format(companyid))
-        print("Logging user in with company id {}".format(companyid))
-        if not user:
-            logging.debug("User doesn't exist, creating account in database")
-            print("User doesn't exist, creating account in database")
-            user = User(uid=userid, coid=companyid)
-            db.session.add(user)
-            db.session.commit()
-            logging.debug("User successfully created")
-        # Log the user in
-        login_user(user, True)
-    # Send them to the landing page, where they authenticate other services
-    logging.debug("Current User: {}".format(current_user))
-    return render_template('index.html')
+    try:
+        # If the user doesn't exist, create an account and store it in the database
+        if current_user.is_anonymous:
+            user = User.query.filter_by(coid=companyid).first()
+            logging.debug("Logging user in with company id {}".format(companyid))
+            print("Logging user in with company id {}".format(companyid))
+            if not user:
+                logging.debug("User doesn't exist, creating account in database")
+                print("User doesn't exist, creating account in database")
+                user = User(uid=userid, coid=companyid)
+                db.session.add(user)
+                db.session.commit()
+                logging.debug("User successfully created")
+            # Log the user in
+            login_user(user, True)
+        # Send them to the landing page, where they authenticate other services
+        logging.debug("Current User: {}".format(current_user))
+        return render_template('index.html')
+    except:
+        logging.error("Error occured when user reuqested connect page")
+        logging.exception('')
+        return render_template('error.html')
 
 # This shows the user the upload pages for the accounts they have unlocked
 @app.route('/publish/COID=<int:companyid>/UID=<int:uid>/PID=<int:projectid>')
 def publish_land(uid, companyid, projectid):
-    logout_user()
-    if current_user.is_anonymous:
-        user = User.query.filter_by(coid=companyid).first()
-        # Tells user to authenticate if their account doesn't exist
-        if not user:
-            logging.error("User with coid={} and uid={} doesn't exist in database".format(companyid, uid))
-            return render_template('invalid.html')
-        login_user(user, True)
-    
-    json_data = get_metadata(projectid)
+    try:
+        logout_user()
+        if current_user.is_anonymous:
+            user = User.query.filter_by(coid=companyid).first()
+            # Tells user to authenticate if their account doesn't exist
+            if not user:
+                logging.error("User with coid={} and uid={} doesn't exist in database".format(companyid, uid))
+                return render_template('invalid.html')
+            login_user(user, True)
+        
+        json_data = get_metadata(projectid)
 
-    upload_status = get_upload_status(projectid)
+        upload_status = get_upload_status(projectid)
 
-    return render_template('publish.html', data=json_data, status=upload_status)
+        return render_template('publish.html', data=json_data, status=upload_status)
+    except:
+        logging.error("Error occured when user reuqested publish page")
+        logging.exception('')
+        return render_template('error.html')
 
 # AUTHORIZATION SERVICES
 @app.route('/authorize/<provider>')
 def oauth_authorize(provider):
-    if provider == "instagram":
-        logging.debug("An unavailable social media account has been provided.")
+    try:
+        if provider == "instagram":
+            logging.debug("An unavailable social media account has been provided.")
+            return render_template('error.html')
+        # Google needs to be handled separately
+        if provider == 'google':
+            # Create an OAuth flow to the google servers using the info in the config
+            logging.debug("Beginning dance for google OAuth")
+            flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
+                app.config['CLIENT_SECRETS_FILE'],
+                scopes=app.config['SCOPES']
+            )
+
+            logging.debug("Google OAuth flow connection established")
+
+            # Get the URI to redirect the user back to the website once auth'd on google services
+            flow.redirect_uri = url_for('oauth2callback', _external=True)
+
+            # Get link to direct user to google
+            authorization_url, state = flow.authorization_url(
+                access_type='offline',
+                include_granted_scopes='true'
+            )
+
+            # Store the state so the callback can verify the auth server response.
+            session['state'] = state
+            
+            # Return the google auth url to user
+            return redirect(authorization_url)
+        else:
+            logging.debug("Facebook or Twitter requested, beginning relevant OAuth dance")
+            oauth = OAuthSignIn.get_provider(provider)
+            return oauth.authorize()
+    except:
+        logging.error("Error occured when user reuqested connect website")
+        logging.exception('')
         return render_template('error.html')
-    # Google needs to be handled separately
-    if provider == 'google':
-        # Create an OAuth flow to the google servers using the info in the config
-        logging.debug("Beginning dance for google OAuth")
-        flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-            app.config['CLIENT_SECRETS_FILE'],
-            scopes=app.config['SCOPES']
-        )
-
-        logging.debug("Google OAuth flow connection established")
-
-        # Get the URI to redirect the user back to the website once auth'd on google services
-        flow.redirect_uri = url_for('oauth2callback', _external=True)
-
-        # Get link to direct user to google
-        authorization_url, state = flow.authorization_url(
-            access_type='offline',
-            include_granted_scopes='true'
-        )
-
-        # Store the state so the callback can verify the auth server response.
-        session['state'] = state
-        
-        # Return the google auth url to user
-        return redirect(authorization_url)
-    else:
-        logging.debug("Facebook or Twitter requested, beginning relevant OAuth dance")
-        oauth = OAuthSignIn.get_provider(provider)
-        return oauth.authorize()
 
 # For youtube
 @app.route('/oauth2callback')
@@ -148,6 +163,8 @@ def oauth2callback():
         logging.debug("User successfully authenticated")
         return redirect(url_for('index'))
     except:
+        logging.error("Error occured when user requested youtube connect")
+        logging.exception('')
         return render_template('error.html')
 
 @app.route('/callback/<provider>')
@@ -179,134 +196,161 @@ def oauth_callback(provider):
             db.session.commit()
         return redirect(url_for('index'))
     except:
+        logging.error("Error occured when user requested twitter/facebook connect")
+        logging.exception('')
         return render_template('error.html')
 
 # UI Upload helpers
 @login_required
 @app.route('/publish/twitter/<int:proj_id>')
 def publish_twitter(proj_id):
+    try:
 
-    # Open JSON data to read metadata
-    json_data = get_metadata(proj_id)
+        # Open JSON data to read metadata
+        json_data = get_metadata(proj_id)
 
-    logging.debug("User with coid={} and uid={} has made a request for Twitter upload".format(current_user.coid, current_user.uid))
-    return render_template('twitter.html', data=json_data)
+        logging.debug("User with coid={} and uid={} has made a request for Twitter upload".format(current_user.coid, current_user.uid))
+        return render_template('twitter.html', data=json_data) 
+    except:        
+        logging.error("Error occured when user requested twitter publish")
+        logging.exception('')
+        return render_template('error.html')
 
 @login_required
 @app.route('/publish/youtube/<int:proj_id>')
 def publish_youtube(proj_id):
+    try:
+        # Open JSON data to read metadata
+        json_data = get_metadata(proj_id)
 
-    # Open JSON data to read metadata
-    json_data = get_metadata(proj_id)
-
-    logging.debug("User with coid={} and uid={} has made a request for Youtube upload".format(current_user.coid, current_user.uid))
-    return render_template('google.html', data=json_data)
+        logging.debug("User with coid={} and uid={} has made a request for Youtube upload".format(current_user.coid, current_user.uid))
+        return render_template('google.html', data=json_data)
+    except:
+        logging.error("Error occured when user requested youtube publish")
+        logging.exception('')
+        return render_template('error.html')
 
 @login_required
 @app.route('/publish/facebook/<int:proj_id>')
 def publish_facebook(proj_id):    
-    
-    # Open JSON data to read metadata
-    json_data = get_metadata(proj_id)
+    try:
+        # Open JSON data to read metadata
+        json_data = get_metadata(proj_id)
 
-    logging.debug("User with coid={} and uid={} has made a request for Facebook upload".format(current_user.coid, current_user.uid))
-    return render_template('facebook.html', data=json_data)
+        logging.debug("User with coid={} and uid={} has made a request for Facebook upload".format(current_user.coid, current_user.uid))
+        return render_template('facebook.html', data=json_data)
+    except:
+        logging.error("Error occured when user requested facebook publish")
+        logging.exception('')
+        return render_template('error.html')
 
 # API Upload functions
 @login_required
 @app.route('/upload/twitter/<int:proj_id>', methods=['POST'])
 def send_twitter(proj_id):
-    # Twitter status - This is the tweet
-    stat = request.form['twitter_body']
+    try:
+        # Twitter status - This is the tweet
+        stat = request.form['twitter_body']
 
-    twitter_json = {
-        'social_media': 'twitter',
-        'proj_id': proj_id,
-        'twitter_body': stat,
-        'coid': current_user.coid,
-        'uid': current_user.uid,
-        'access_token': current_user.twitter_access_token,
-        'access_token_secret': current_user.twitter_access_token_secret,
-        'upload_status': 0,
-        'status': False,
-        'dateRequested': datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
-    }
+        twitter_json = {
+            'social_media': 'twitter',
+            'proj_id': proj_id,
+            'twitter_body': stat,
+            'coid': current_user.coid,
+            'uid': current_user.uid,
+            'access_token': current_user.twitter_access_token,
+            'access_token_secret': current_user.twitter_access_token_secret,
+            'upload_status': 0,
+            'status': False,
+            'dateRequested': datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
+        }
 
-    logging.debug("Writing upload status to file")
-    with open(
-        os.path.join(
-            app.config['BASE_DIR'],
-            app.config['UPLOAD_QUEUE'],
-            str(proj_id) + "_" + twitter_json['social_media'] + "_upload_status.json"
-        ), 'w'
-    ) as json_write:
-        json.dump(twitter_json, json_write)
+        logging.debug("Writing upload status to file")
+        with open(
+            os.path.join(
+                app.config['BASE_DIR'],
+                app.config['UPLOAD_QUEUE'],
+                str(proj_id) + "_" + twitter_json['social_media'] + "_upload_status.json"
+            ), 'w'
+        ) as json_write:
+            json.dump(twitter_json, json_write)
 
-    return render_template('requested.html', proj_id=proj_id)
-
+        return render_template('requested.html', proj_id=proj_id)
+    except:
+        logging.error("Error occured when user requested twitter upload initialisation")
+        logging.exception('')
+        return render_template('error.html')
 
 @login_required
 @app.route('/upload/youtube/<int:proj_id>', methods=['POST'])
 def send_youtube(proj_id):
+    try:
+        youtube_json = {
+            'social_media': 'youtube',
+            'proj_id': proj_id,
+            'yt_title': request.form['yt_title'],
+            'yt_desc': request.form['yt_desc'],
+            'yt_tags': request.form['yt_tags'],
+            'yt_privacy': request.form['privacy'],
+            'coid': current_user.coid,
+            'uid': current_user.uid,
+            'youtube_credentials': current_user.youtube_credentials,
+            'upload_status': 0,
+            'status': False,
+            'dateRequested': datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
+        }
 
-    youtube_json = {
-        'social_media': 'youtube',
-        'proj_id': proj_id,
-        'yt_title': request.form['yt_title'],
-        'yt_desc': request.form['yt_desc'],
-        'yt_tags': request.form['yt_tags'],
-        'yt_privacy': request.form['privacy'],
-        'coid': current_user.coid,
-        'uid': current_user.uid,
-        'youtube_credentials': current_user.youtube_credentials,
-        'upload_status': 0,
-        'status': False,
-        'dateRequested': datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
-    }
-
-    logging.debug("Writing upload status to file")
-    with open(
-        os.path.join(
-            app.config['BASE_DIR'],
-            app.config['UPLOAD_QUEUE'],
-            str(proj_id) + "_" + youtube_json['social_media'] + "_upload_status.json"
-        ), 'w'
-    ) as json_write:
-        json.dump(youtube_json, json_write)
-    
+        logging.debug("Writing upload status to file")
+        with open(
+            os.path.join(
+                app.config['BASE_DIR'],
+                app.config['UPLOAD_QUEUE'],
+                str(proj_id) + "_" + youtube_json['social_media'] + "_upload_status.json"
+            ), 'w'
+        ) as json_write:
+            json.dump(youtube_json, json_write)
         
-    return render_template('requested.html', proj_id=proj_id)
+            
+        return render_template('requested.html', proj_id=proj_id)
+    except:
+        logging.error("Error occured when user requested youtube upload initialisation")
+        logging.exception('')
+        return render_template('error.html')
 
 
 
 @login_required
 @app.route('/upload/facebook/<int:proj_id>', methods=['POST'])
 def send_facebook(proj_id):
+    try:
+        facebook_json = {
+            'social_media': 'facebook',
+            'proj_id': proj_id,
+            'facebook_title': request.form['facebook_title'],
+            'facebook_body': request.form['facebook_body'],
+            'coid': current_user.coid,
+            'uid': current_user.uid,
+            'access_token': current_user.facebook_access_token,
+            'access_token_secret': current_user.facebook_access_token_secret,
+            'upload_status': 0,
+            'status': False,
+            'dateRequested': datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
+        }
 
-    facebook_json = {
-        'social_media': 'facebook',
-        'proj_id': proj_id,
-        'facebook_title': request.form['facebook_title'],
-        'facebook_body': request.form['facebook_body'],
-        'coid': current_user.coid,
-        'uid': current_user.uid,
-        'access_token': current_user.facebook_access_token,
-        'access_token_secret': current_user.facebook_access_token_secret,
-        'upload_status': 0,
-        'status': False,
-        'dateRequested': datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
-    }
-
-    with open(
-        os.path.join(
-            app.config['BASE_DIR'],
-            app.config['UPLOAD_QUEUE'],
-            str(proj_id) + "_" + facebook_json['social_media'] + "_upload_status.json"
-        ), 'w'
-    ) as json_write:
-        json.dump(facebook_json, json_write)
-    
-    return render_template('requested.html', proj_id=proj_id)
+        with open(
+            os.path.join(
+                app.config['BASE_DIR'],
+                app.config['UPLOAD_QUEUE'],
+                str(proj_id) + "_" + facebook_json['social_media'] + "_upload_status.json"
+            ), 'w'
+        ) as json_write:
+            json.dump(facebook_json, json_write)
+        
+        return render_template('requested.html', proj_id=proj_id)
+    except:
+        logging.error("Error occured when user requested twitter upload initialisation")
+        logging.exception('')
+        return render_template('error.html')
 
 
 @login_required
