@@ -27,8 +27,8 @@ class Config(object):
 
     OAUTH_CREDENTIALS = os.environ.get('OAUTH_CREDENTIALS') or {
         'facebook': {
-            'id': '1209619439222314',
-            'secret': 'e7ab5768f06f329206e960e0965eb78c'
+            'id': '1400329783451742',
+            'secret': '35eb5e369af963d7f2f1679cafaf2b96'
         },
         'twitter': {
             'id': 'UID4eI5FJv1yeyoiuPW8aHE3X',
