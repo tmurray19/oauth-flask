@@ -23,16 +23,16 @@ class Config(object):
 
     OAUTH_CREDENTIALS = os.environ.get('OAUTH_CREDENTIALS') or {
         'facebook': {
-            'id': '1209619439222314',
-            'secret': 'e7ab5768f06f329206e960e0965eb78c'
+            'id': '',
+            'secret': ''
         },
         'twitter': {
-            'id': 'tJr2grTKu1j0NKH6YuHy4KQxI',
-            'secret': 'Qj6SJZWFSVio8ORuALs0nuFc3aVmL6gsHwndkJF6AWYRWnMT3e'
+            'id': '',
+            'secret': ''
         },
         'google': {
-            'id': '705996956550-pdtpes13chavp1sl2j6vpei968n1hach.apps.googleusercontent.com',
-            'secret': 'BCnxYZeVVC7e4RS7evTh5P8D'
+            'id': '',
+            'secret': ''
         }
     }
 
